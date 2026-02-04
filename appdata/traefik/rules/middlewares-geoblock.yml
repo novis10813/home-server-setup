@@ -1,0 +1,8 @@
+http:
+  middlewares:
+    middlewares-geoblock:
+      plugin:
+        geo-block:
+          allowCountries:
+            - TW
+            - MY
