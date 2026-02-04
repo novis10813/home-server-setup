@@ -24,8 +24,13 @@ secrets:
     file: ${DOCKERDIR}/secrets/basic_auth_credentials
   cf_dns_api_token:
     file: ${DOCKERDIR}/secrets/cf_dns_api_token
+  google_oauth_client_id:
+    file: ${DOCKERDIR}/secrets/google_oauth_client_id
+  google_oauth_client_secret:
+    file: ${DOCKERDIR}/secrets/google_oauth_client_secret
 
 ########################### INCLUDES
 include:
   - compose/infrastructure/socket-proxy.yml
   - compose/infrastructure/traefik.yml
+  - compose/infrastructure/traefik-forward-auth.yml
