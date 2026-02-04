@@ -1,0 +1,97 @@
+# Traefik 3 - Reverse Proxy (uses Socket Proxy for Docker provider)
+# Ref: SimpleHomelab/Docker-Traefik compose/hs/traefik.yml
+
+services:
+  traefik:
+    container_name: traefik
+    image: traefik:3.6.7
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    depends_on:
+      - socket-proxy
+    networks:
+      t3_proxy:
+        ipv4_address: 192.168.90.254
+      socket_proxy:
+    command:
+      - --global.checkNewVersion=true
+      - --global.sendAnonymousUsage=false
+      # Entrypoints
+      - --entrypoints.web-external.address=:81
+      - --entrypoints.web-internal.address=:80
+      - --entrypoints.websecure-external.address=:444
+      - --entrypoints.websecure-internal.address=:443
+      - --entrypoints.traefik.address=:8080
+      - --entrypoints.websecure-external.http3=true
+      - --entrypoints.websecure-internal.http3=true
+      # HTTP -> HTTPS redirects
+      - --entrypoints.web-external.http.redirections.entrypoint.to=websecure-external
+      - --entrypoints.web-external.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web-external.http.redirections.entrypoint.permanent=true
+      - --entrypoints.web-internal.http.redirections.entrypoint.to=websecure-internal
+      - --entrypoints.web-internal.http.redirections.entrypoint.scheme=https
+      - --entrypoints.web-internal.http.redirections.entrypoint.permanent=true
+      # API / Dashboard
+      - --api=true
+      - --api.dashboard=true
+      - --api.insecure=true
+      # Trusted IPs for X-Forwarded-* (Cloudflare + LAN)
+      - --entrypoints.websecure-external.forwardedHeaders.trustedIPs=${CLOUDFLARE_IPS},${LOCAL_IPS}
+      - --entrypoints.websecure-internal.forwardedHeaders.trustedIPs=${CLOUDFLARE_IPS},${LOCAL_IPS}
+      # Logging
+      - --log=true
+      - --log.filePath=/logs/traefik.log
+      - --log.level=INFO
+      - --accessLog=true
+      - --accessLog.filePath=/logs/access.log
+      - --accessLog.bufferingSize=100
+      - --accessLog.filters.statusCodes=204-299,400-499,500-599
+      # Docker provider via Socket Proxy (not direct socket)
+      - --providers.docker=true
+      - --providers.docker.endpoint=tcp://socket-proxy:2375
+      - --providers.docker.exposedByDefault=false
+      - --providers.docker.network=t3_proxy
+      # TLS
+      - --entrypoints.websecure-external.http.tls=true
+      - --entrypoints.websecure-external.http.tls.options=tls-opts@file
+      - --entrypoints.websecure-internal.http.tls=true
+      - --entrypoints.websecure-internal.http.tls.options=tls-opts@file
+      - --entrypoints.websecure-external.http.tls.certresolver=dns-cloudflare
+      - --entrypoints.websecure-internal.http.tls.certresolver=dns-cloudflare
+      - --entrypoints.websecure-external.http.tls.domains[0].main=${DOMAINNAME_1}
+      - --entrypoints.websecure-external.http.tls.domains[0].sans=*.${DOMAINNAME_1}
+      - --entrypoints.websecure-internal.http.tls.domains[0].main=${DOMAINNAME_1}
+      - --entrypoints.websecure-internal.http.tls.domains[0].sans=*.${DOMAINNAME_1}
+      # Dynamic config (file provider)
+      - --providers.file.directory=/rules
+      - --providers.file.watch=true
+      # ACME / Let's Encrypt (DNS Cloudflare)
+      - --certificatesResolvers.dns-cloudflare.acme.storage=/acme.json
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.provider=cloudflare
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.resolvers=1.1.1.1:53,1.0.0.1:53
+      - --certificatesResolvers.dns-cloudflare.acme.dnsChallenge.propagation.delaybeforechecks=120
+    ports:
+      - "80:80"
+      - "81:81"
+      - "443:443"
+      - "444:444"
+      - "${TRAEFIK_PORT:-8080}:8080"
+    volumes:
+      - ${DOCKERDIR}/appdata/traefik/rules:/rules:ro
+      - ${DOCKERDIR}/appdata/traefik/acme/acme.json:/acme.json
+      - ${DOCKERDIR}/logs/traefik:/logs
+    environment:
+      - TZ=${TZ:-UTC}
+      - CF_DNS_API_TOKEN_FILE=/run/secrets/cf_dns_api_token
+      - DOMAINNAME_1=${DOMAINNAME_1}
+    secrets:
+      - cf_dns_api_token
+      - basic_auth_credentials
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.traefik-rtr.entrypoints=websecure-internal,websecure-external"
+      - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.traefik-rtr.service=api@internal"
+      # Dashboard auth: use basic auth (optional: switch to chain-oauth@file when OAuth is set up)
+      - "traefik.http.routers.traefik-rtr.middlewares=traefik-dashboard-auth@file"

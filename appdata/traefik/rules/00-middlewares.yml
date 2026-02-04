@@ -1,0 +1,8 @@
+# Traefik dynamic config: middlewares (loaded by file provider)
+# Dashboard uses basicAuth with credentials from Docker secret.
+
+http:
+  middlewares:
+    traefik-dashboard-auth:
+      basicAuth:
+        usersFile: "/run/secrets/basic_auth_credentials"

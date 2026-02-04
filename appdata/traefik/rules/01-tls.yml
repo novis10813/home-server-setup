@@ -1,0 +1,5 @@
+# Traefik dynamic config: TLS options (referenced as tls-opts@file)
+tls:
+  options:
+    tls-opts:
+      minVersion: VersionTLS12
