@@ -93,5 +93,4 @@ services:
       - "traefik.http.routers.traefik-rtr.entrypoints=websecure-internal,websecure-external"
       - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME_1}`)"
       - "traefik.http.routers.traefik-rtr.service=api@internal"
-      # Dashboard auth: use basic auth (optional: switch to chain-oauth@file when OAuth is set up)
-      - "traefik.http.routers.traefik-rtr.middlewares=traefik-dashboard-auth@file"
+      - "traefik.http.routers.traefik-rtr.middlewares=chain-oauth@file"
