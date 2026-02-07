@@ -1,0 +1,30 @@
+# Node Exporter - Host-level Metrics Exporter for Prometheus
+# Ref: https://github.com/prometheus/node_exporter
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+# 用途: 收集主機層級指標 (CPU, RAM, Disk, Network)
+
+services:
+  node-exporter:
+    container_name: node-exporter
+    image: prom/node-exporter:v1.9.1
+    profiles:
+      - monitor
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    pid: host  # 需要存取主機 PID namespace 以收集程序指標
+    command:
+      - --path.procfs=/host/proc
+      - --path.sysfs=/host/sys
+      - --path.rootfs=/rootfs
+      - --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    environment:
+      - TZ=${TZ:-UTC}
+    # 不對外暴露，僅供 Prometheus 內部抓取
+    # Port: 9100 (container internal)
