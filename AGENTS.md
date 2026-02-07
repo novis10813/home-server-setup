@@ -12,6 +12,7 @@
 - **安全代理**：LinuxServer Socket Proxy（Docker API 安全存取）
 - **SSO 認證**：traefik-forward-auth（OAuth 2.0）
 - **憑證管理**：Let's Encrypt + Cloudflare DNS Challenge
+- **監控**：Prometheus v3.9.1 + Grafana 12.3.2（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
 1. **職責分離**：依服務類型劃分 Compose 檔案（目前僅有 `infrastructure`）
@@ -39,20 +40,17 @@
 │   └── infrastructure/
 │       ├── traefik.yml                 # Traefik 反向代理服務定義
 │       ├── socket-proxy.yml            # Docker API 安全代理
-│       └── traefik_forward_auth.yml    # OAuth SSO 服務
+│       ├── traefik_forward_auth.yml    # OAuth SSO 服務
+│       ├── prometheus.yml              # Prometheus 監控
+│       └── grafana.yml                 # Grafana 儀表板
 ├── appdata/
-│   └── traefik/
-│       ├── rules/                      # Traefik 動態規則（middlewares、chains）
-│       │   ├── 01-tls.yml
-│       │   ├── chain-oauth.yml
-│       │   ├── chain-basic-auth.yml
-│       │   ├── chain-no-auth.yml
-│       │   └── middlewares-*.yml
-│       └── acme/
-│           └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
+│   ├── traefik/
+│   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
+│   │   └── acme/
+│   │       └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
+│   └── prometheus/
+│       └── prometheus.yml              # Prometheus 抓取設定
 ├── secrets/                            # 敏感檔案（勿提交版控）
-│   ├── basic_auth_credentials          # htpasswd 格式
-│   └── cf_dns_api_token                # Cloudflare DNS API Token
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
 ```

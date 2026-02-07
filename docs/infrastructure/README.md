@@ -1,11 +1,13 @@
 # Infrastructure 概述
 
-Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**與基礎服務，包含：
+Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**、**認證**與**監控**服務，包含：
 
 - **Traefik** — 反向代理、路由、TLS（Let's Encrypt DNS-Cloudflare）、服務發現（經 Socket Proxy）
 - **Socket Proxy** — Docker API 安全代理，Traefik 透過 `tcp://socket-proxy:2375` 取得容器資訊
 - **traefik-forward-auth** — OAuth 2.0 SSO，供 Traefik 的 forwardAuth 使用
 - **Pi-hole** — DNS 與廣告攔截
+- **Prometheus** — 指標收集與儲存（profile: `monitor`，需以 `--profile monitor` 啟動）
+- **Grafana** — 監控儀表板（profile: `monitor`）
 
 ---
 
@@ -23,6 +25,9 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 
 ## 快速參考
 
-- **啟動**：`docker compose -f docker-compose-infrastructure.yml up -d`
+- **啟動（不含監控）**：`docker compose -f docker-compose-infrastructure.yml up -d`
+- **啟動（含監控）**：`docker compose -f docker-compose-infrastructure.yml --profile monitor up -d`
 - **Dashboard**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
-- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`
+- **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網，無認證）
+- **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
+- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`

@@ -10,16 +10,19 @@
 
 | 區塊 | 說明 |
 |------|------|
-| [Infrastructure](infrastructure/README.md) | 網關（Traefik、Socket Proxy、OAuth、Pi-hole）— 架構、設定、服務、Traefik 規則、操作與維護 |
+| [Infrastructure](infrastructure/README.md) | 網關（Traefik、Socket Proxy、OAuth、Pi-hole）+ 監控（Prometheus、Grafana）— 架構、設定、服務、Traefik 規則、操作與維護 |
 | [App](app/README.md) | 應用類服務（尚未有設定，待補充） |
 
 ---
 
 ## 快速參考
 
-- **主 Compose**：`docker compose -f docker-compose-infrastructure.yml up -d`
+- **主 Compose（不含監控）**：`docker compose -f docker-compose-infrastructure.yml up -d`
+- **主 Compose（含監控）**：`docker compose -f docker-compose-infrastructure.yml --profile monitor up -d`
 - **Dashboard**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
-- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`
+- **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網）
+- **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
+- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`
 - **敏感檔**：`secrets/`、`.env`（勿提交版控）
 
 參考資源：[SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)、[Traefik v3 文件](https://doc.traefik.io/traefik/)。

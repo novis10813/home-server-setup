@@ -31,6 +31,7 @@ Google OAuth Client Secret 由 `secrets/google_oauth_client_secret` 管理，不
 | `google_oauth_client_id` | （可選） | Google OAuth Client ID，若不以環境變數提供則放此檔。 |
 | `google_oauth_client_secret` | traefik-forward-auth | Google OAuth Client Secret。 |
 | `tfa_config` | traefik-forward-auth | traefik-forward-auth 設定 YAML（client_id、client_secret 路徑、domain 等）。 |
+| `grafana_admin_password` | Grafana | Grafana 管理員密碼。密碼需符合 Grafana 密碼政策（長度、複雜度）。 |
 
 詳見 `secrets/README.md`（若已補充 OAuth 說明可一併參考）。
 

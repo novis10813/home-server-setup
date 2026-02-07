@@ -5,8 +5,8 @@
 `docker-compose-infrastructure.yml` 負責：
 
 - 定義 **networks**：`default`、`socket_proxy`、`t3_proxy`
-- 定義 **secrets**：`basic_auth_credentials`、`cf_dns_api_token`、`google_oauth_client_id`、`google_oauth_client_secret`
-- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole
+- 定義 **secrets**：`basic_auth_credentials`、`cf_dns_api_token`、`google_oauth_client_id`、`google_oauth_client_secret`、`grafana_admin_password`
+- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、prometheus、grafana
 
 ---
 
@@ -60,6 +60,54 @@
   - `pihole.${DOMAINNAME_1}`：HTTPS、`pihole-redirect`（根路徑→`/admin/`）+ `chain-oauth@file`。
   - HTTP 用 `web-internal` 並以 `chain-no-auth@file` 導向 HTTPS。
 - **環境**：`TZ`、`FTLCONF_webserver_api_password`（預設 `admin`）、`FTLCONF_dns_listeningMode`、`FTLCONF_misc_etc_dnsmasq_d`。
+
+---
+
+## Prometheus（指標收集）
+
+- **檔案**：`compose/infrastructure/prometheus.yml`
+- **映像**：`prom/prometheus:v3.9.1`
+- **容器名**：`prometheus`
+- **Profile**：`monitor`（需以 `--profile monitor` 啟動）
+- **網路**：`t3_proxy`
+- **用途**：收集與儲存時間序列指標，用於監控 Traefik 與其他服務。
+- **資料**：`${DATADIR}/prometheus/` → `/prometheus`（運行時資料）
+- **設定**：`${DOCKERDIR}/appdata/prometheus/prometheus.yml` → `/etc/prometheus/prometheus.yml`（抓取設定）
+- **Traefik**：
+  - `prometheus.${DOMAINNAME_1}`：HTTPS、`chain-no-auth@file`（僅內網存取）
+  - 僅使用 `websecure-internal` entrypoint，不對外開放
+
+### 預設 Scrape Targets
+
+- `prometheus:9090` — Prometheus 自身指標
+- `traefik:8080` — Traefik 指標（需在 Traefik 啟用 `--metrics.prometheus=true`）
+
+---
+
+## Grafana（監控儀表板）
+
+- **檔案**：`compose/infrastructure/grafana.yml`
+- **映像**：`grafana/grafana:12.3.2`
+- **容器名**：`grafana`
+- **Profile**：`monitor`（需以 `--profile monitor` 啟動）
+- **網路**：`t3_proxy`
+- **用途**：視覺化 Prometheus 收集的指標，提供儀表板與告警功能。
+- **資料**：`${DATADIR}/grafana/` → `/var/lib/grafana`（運行時資料）
+- **Secrets**：`grafana_admin_password`（管理員密碼，以 bind mount 掛載）
+- **Traefik**：
+  - `grafana.${DOMAINNAME_1}`：HTTPS、`chain-oauth@file`（OAuth 保護）
+  - 使用 `websecure-internal` 與 `websecure-external` entrypoints（內外網皆可存取）
+- **環境**：
+  - `GF_SECURITY_ADMIN_USER=admin`
+  - `GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password`
+  - `GF_USERS_ALLOW_SIGN_UP=false`
+  - `GF_SERVER_ROOT_URL=https://grafana.${DOMAINNAME_1}`
+
+### 初始設定
+
+1. 首次登入使用 admin 帳號與 secrets 中設定的密碼
+2. 新增 Prometheus 資料來源：URL 為 `http://prometheus:9090`
+3. 匯入 Traefik 儀表板：Dashboard ID `17346`
 
 ---
 

@@ -15,12 +15,13 @@
 | Docker API 代理 | LinuxServer Socket Proxy |
 | SSO 認證 | traefik-forward-auth（OAuth 2.0） |
 | 憑證 | Let's Encrypt + Cloudflare DNS Challenge |
+| 監控 | Prometheus v3.9.1 + Grafana 12.3.2（profile: `monitor`） |
 
 ---
 
 ## 設計邏輯
 
-1. **職責分離**：依服務類型劃分 Compose（目前為 `infrastructure`：網關 + OAuth + Pi-hole）。
+1. **職責分離**：依服務類型劃分 Compose（目前為 `infrastructure`：網關 + OAuth + Pi-hole + 監控）。
 2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges:true`。
 3. **環境變數驅動**：敏感與可變參數透過 `.env` 與 Docker Secrets 管理。
 4. **配置與資料分離**：
@@ -34,7 +35,7 @@
 
 | Compose 檔案 | 職責 | 說明 |
 |-------------|------|------|
-| `docker-compose-infrastructure.yml` | 網關（Gateway） | Traefik + Socket Proxy + OAuth + Pi-hole |
+| `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Pi-hole + Prometheus + Grafana |
 
 主檔透過 `include` 引入：
 
@@ -42,6 +43,8 @@
 - `compose/infrastructure/traefik.yml`
 - `compose/infrastructure/traefik-forward-auth.yml`
 - `compose/infrastructure/pihole.yml`
+- `compose/infrastructure/prometheus.yml`（profile: monitor）
+- `compose/infrastructure/grafana.yml`（profile: monitor）
 
 ---
 
@@ -57,21 +60,26 @@
 │       ├── traefik.yml                 # Traefik 反向代理
 │       ├── socket-proxy.yml           # Docker API 安全代理
 │       ├── traefik-forward-auth.yml   # OAuth SSO
-│       └── pihole.yml                 # Pi-hole DNS
+│       ├── pihole.yml                 # Pi-hole DNS
+│       ├── prometheus.yml             # Prometheus 監控（profile: monitor）
+│       └── grafana.yml                # Grafana 儀表板（profile: monitor）
 ├── appdata/
-│   └── traefik/
-│       ├── rules/                     # 動態規則（middlewares、chains）
-│       │   ├── 01-tls.yml
-│       │   ├── chain-oauth.yml, chain-basic-auth.yml, chain-no-auth.yml
-│       │   └── middlewares-*.yml
-│       └── acme/
-│           └── acme.json              # Let's Encrypt 憑證（chmod 600）
+│   ├── traefik/
+│   │   ├── rules/                     # 動態規則（middlewares、chains）
+│   │   │   ├── 01-tls.yml
+│   │   │   ├── chain-oauth.yml, chain-basic-auth.yml, chain-no-auth.yml
+│   │   │   └── middlewares-*.yml
+│   │   └── acme/
+│   │       └── acme.json              # Let's Encrypt 憑證（chmod 600）
+│   └── prometheus/
+│       └── prometheus.yml             # Prometheus 抓取設定
 ├── secrets/                            # 敏感檔案（勿提交）
 │   ├── basic_auth_credentials
 │   ├── cf_dns_api_token
 │   ├── google_oauth_client_id
 │   ├── google_oauth_client_secret
 │   ├── tfa_config                     # traefik-forward-auth 設定
+│   ├── grafana_admin_password         # Grafana 管理員密碼
 │   └── README.md
 └── logs/
     └── traefik/                       # Traefik 日誌
