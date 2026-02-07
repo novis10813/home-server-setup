@@ -1,0 +1,39 @@
+# Grafana - Observability & Monitoring Dashboard
+# Ref: https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+
+services:
+  grafana:
+    container_name: grafana
+    image: grafana/grafana:12.3.2
+    profiles:
+      - monitor
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    user: "472:472"  # Grafana 官方建議的 UID:GID
+    volumes:
+      - ${DATADIR}/grafana:/var/lib/grafana
+      - ${DOCKERDIR}/secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
+    environment:
+      - TZ=${TZ:-UTC}
+      - GF_SERVER_ROOT_URL=https://grafana.${DOMAINNAME_1}
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password
+      # OAuth 由 Traefik Forward Auth 處理，Grafana 本身可選擇性啟用匿名存取
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_USERS_ALLOW_SIGN_UP=false
+      # 日誌設定
+      - GF_LOG_MODE=console
+      - GF_LOG_LEVEL=info
+    labels:
+      - "traefik.enable=true"
+      # Router - 外部存取 (OAuth 認證)
+      - "traefik.http.routers.grafana-rtr.entrypoints=websecure-internal,websecure-external"
+      - "traefik.http.routers.grafana-rtr.rule=Host(`grafana.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.grafana-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.grafana-rtr.service=grafana-svc"
+      # Service
+      - "traefik.http.services.grafana-svc.loadbalancer.server.port=3000"
