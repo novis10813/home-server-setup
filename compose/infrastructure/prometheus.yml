@@ -1,0 +1,37 @@
+# Prometheus - Time-Series Database for Metrics Collection
+# Ref: https://prometheus.io/docs/prometheus/latest/installation/
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+
+services:
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus:v3.9.1
+    profiles:
+      - monitor
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    user: "65534:65534"  # nobody:nogroup - Prometheus 官方建議
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+      - --web.enable-lifecycle  # 允許透過 API 重載設定
+    volumes:
+      - ${DOCKERDIR}/appdata/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${DATADIR}/prometheus:/prometheus
+    environment:
+      - TZ=${TZ:-UTC}
+    labels:
+      - "traefik.enable=true"
+      # Router - 內網存取 (不套用 OAuth，僅限內網)
+      - "traefik.http.routers.prometheus-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.prometheus-rtr.rule=Host(`prometheus.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.prometheus-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.prometheus-rtr.service=prometheus-svc"
+      # Service
+      - "traefik.http.services.prometheus-svc.loadbalancer.server.port=9090"
