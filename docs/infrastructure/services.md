@@ -6,7 +6,7 @@
 
 - 定義 **networks**：`default`、`socket_proxy`、`t3_proxy`
 - 定義 **secrets**：`basic_auth_credentials`、`cf_dns_api_token`、`google_oauth_client_id`、`google_oauth_client_secret`、`grafana_admin_password`
-- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、prometheus、grafana
+- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、prometheus、grafana、node-exporter、cadvisor
 
 ---
 
@@ -81,6 +81,44 @@
 
 - `prometheus:9090` — Prometheus 自身指標
 - `traefik:8080` — Traefik 指標（需在 Traefik 啟用 `--metrics.prometheus=true`）
+- `node-exporter:9100` — 主機層級指標（CPU、記憶體、磁碟、網路）
+- `cadvisor:8080` — 容器層級指標
+
+---
+
+## Node Exporter（主機指標）
+
+- **檔案**：`compose/infrastructure/node-exporter.yml`
+- **映像**：`prom/node-exporter:v1.9.1`
+- **容器名**：`node-exporter`
+- **Profile**：`monitor`（需以 `--profile monitor` 啟動）
+- **網路**：`t3_proxy`
+- **用途**：收集主機層級指標，包含 CPU 使用率、記憶體、磁碟 I/O、網路流量、檔案系統等。
+- **掛載**：
+  - `/proc` → `/host/proc:ro`
+  - `/sys` → `/host/sys:ro`
+  - `/` → `/rootfs:ro`
+- **特殊設定**：`pid: host`（需存取主機 PID namespace）
+- **Port**：9100（僅內部，供 Prometheus 抓取）
+
+---
+
+## cAdvisor（容器指標）
+
+- **檔案**：`compose/infrastructure/cadvisor.yml`
+- **映像**：`gcr.io/cadvisor/cadvisor:v0.52.1`
+- **容器名**：`cadvisor`
+- **Profile**：`monitor`（需以 `--profile monitor` 啟動）
+- **網路**：`t3_proxy`
+- **用途**：收集容器層級指標，包含每個容器的 CPU、記憶體、網路使用量。
+- **掛載**：
+  - `/` → `/rootfs:ro`
+  - `/var/run` → `/var/run:ro`
+  - `/sys` → `/sys:ro`
+  - `/var/lib/docker` → `/var/lib/docker:ro`
+  - `/dev/disk` → `/dev/disk:ro`
+- **特殊設定**：`privileged: true`（需存取 cgroups 與 Docker）、`--docker_only=true`
+- **Port**：8080（僅內部，供 Prometheus 抓取）
 
 ---
 

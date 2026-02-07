@@ -12,7 +12,7 @@
 - **安全代理**：LinuxServer Socket Proxy（Docker API 安全存取）
 - **SSO 認證**：traefik-forward-auth（OAuth 2.0）
 - **憑證管理**：Let's Encrypt + Cloudflare DNS Challenge
-- **監控**：Prometheus v3.9.1 + Grafana 12.3.2（使用 `profiles: [monitor]`）
+- **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
 1. **職責分離**：依服務類型劃分 Compose 檔案（目前僅有 `infrastructure`）
@@ -41,8 +41,10 @@
 │       ├── traefik.yml                 # Traefik 反向代理服務定義
 │       ├── socket-proxy.yml            # Docker API 安全代理
 │       ├── traefik_forward_auth.yml    # OAuth SSO 服務
-│       ├── prometheus.yml              # Prometheus 監控
-│       └── grafana.yml                 # Grafana 儀表板
+│       ├── prometheus.yml              # Prometheus 監控（profile: monitor）
+│       ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
+│       ├── node-exporter.yml           # 主機指標（profile: monitor）
+│       └── cadvisor.yml                # 容器指標（profile: monitor）
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）

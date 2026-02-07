@@ -15,7 +15,7 @@
 | Docker API 代理 | LinuxServer Socket Proxy |
 | SSO 認證 | traefik-forward-auth（OAuth 2.0） |
 | 憑證 | Let's Encrypt + Cloudflare DNS Challenge |
-| 監控 | Prometheus v3.9.1 + Grafana 12.3.2（profile: `monitor`） |
+| 監控 | Prometheus v3.9.1 + Grafana 12.3.2 + Node Exporter v1.9.1 + cAdvisor v0.52.1（profile: `monitor`） |
 
 ---
 
@@ -35,7 +35,7 @@
 
 | Compose 檔案 | 職責 | 說明 |
 |-------------|------|------|
-| `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Pi-hole + Prometheus + Grafana |
+| `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Pi-hole + Prometheus + Grafana + Node Exporter + cAdvisor |
 
 主檔透過 `include` 引入：
 
@@ -45,6 +45,8 @@
 - `compose/infrastructure/pihole.yml`
 - `compose/infrastructure/prometheus.yml`（profile: monitor）
 - `compose/infrastructure/grafana.yml`（profile: monitor）
+- `compose/infrastructure/node-exporter.yml`（profile: monitor）
+- `compose/infrastructure/cadvisor.yml`（profile: monitor）
 
 ---
 
@@ -62,7 +64,9 @@
 │       ├── traefik-forward-auth.yml   # OAuth SSO
 │       ├── pihole.yml                 # Pi-hole DNS
 │       ├── prometheus.yml             # Prometheus 監控（profile: monitor）
-│       └── grafana.yml                # Grafana 儀表板（profile: monitor）
+│       ├── grafana.yml                # Grafana 儀表板（profile: monitor）
+│       ├── node-exporter.yml          # 主機指標（profile: monitor）
+│       └── cadvisor.yml               # 容器指標（profile: monitor）
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                     # 動態規則（middlewares、chains）

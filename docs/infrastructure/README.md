@@ -8,6 +8,8 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 - **Pi-hole** — DNS 與廣告攔截
 - **Prometheus** — 指標收集與儲存（profile: `monitor`，需以 `--profile monitor` 啟動）
 - **Grafana** — 監控儀表板（profile: `monitor`）
+- **Node Exporter** — 主機層級指標收集（profile: `monitor`）
+- **cAdvisor** — 容器層級指標收集（profile: `monitor`）
 
 ---
 
