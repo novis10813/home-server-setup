@@ -34,3 +34,4 @@ include:
   - compose/infrastructure/socket-proxy.yml
   - compose/infrastructure/traefik.yml
   - compose/infrastructure/traefik-forward-auth.yml
+  - compose/infrastructure/pihole.yml

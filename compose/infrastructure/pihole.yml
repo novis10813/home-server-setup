@@ -1,0 +1,41 @@
+services:
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      t3_proxy:
+        ipv4_address: 192.168.90.53 # 固定 IP
+    ports:
+      - "53:53/tcp"
+      - "53:53/udp"
+      # - "67:67/udp" # 如果需要 DHCP
+      - "8053:80/tcp" # 管理介面備用存取
+    environment:
+      TZ: ${TZ}
+      FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:-admin}
+      FTLCONF_dns_listeningMode: "all"
+      FTLCONF_misc_etc_dnsmasq_d: "true"
+    volumes:
+      - ${DATADIR}/pihole/:/etc/pihole
+    labels:
+      - "traefik.enable=true"
+      # Middleware - 根路徑重定向到 /admin/
+      - "traefik.http.middlewares.pihole-redirect.redirectregex.regex=^https?://[^/]+/?$$"
+      - "traefik.http.middlewares.pihole-redirect.redirectregex.replacement=/admin/"
+      - "traefik.http.middlewares.pihole-redirect.redirectregex.permanent=false"
+      # HTTP Router - Redirect to HTTPS
+      - "traefik.http.routers.pihole-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.pihole-rtr-http.rule=Host(`pihole.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.pihole-rtr-http.middlewares=chain-no-auth@file"
+      # HTTPS Router
+      - "traefik.http.routers.pihole-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.pihole-rtr.rule=Host(`pihole.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.pihole-rtr.tls=true"
+      - "traefik.http.routers.pihole-rtr.tls.certresolver=dns-cloudflare"
+      - "traefik.http.routers.pihole-rtr.service=pihole-svc"
+      - "traefik.http.routers.pihole-rtr.middlewares=pihole-redirect,chain-oauth@file"
+      # Service
+      - "traefik.http.services.pihole-svc.loadbalancer.server.port=80"

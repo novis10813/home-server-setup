@@ -17,7 +17,10 @@
 1. **職責分離**：依服務類型劃分 Compose 檔案（目前僅有 `infrastructure`）
 2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
 3. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
-4. **參考來源**：架構參考 [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)
+4. **配置與資料分離**：
+   - `${DOCKERDIR}/appdata/` — 手寫設定檔（版控追蹤）
+   - `${DATADIR}/` — 容器運行時資料（不版控，如資料庫、快取）
+5. **參考來源**：架構參考 [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)
 
 ## 目錄結構
 
@@ -41,7 +44,6 @@
 │       │   └── middlewares-*.yml
 │       └── acme/
 │           └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
-├── configs/                            # 其他服務設定檔
 ├── secrets/                            # 敏感檔案（勿提交版控）
 │   ├── basic_auth_credentials          # htpasswd 格式
 │   └── cf_dns_api_token                # Cloudflare DNS API Token
@@ -97,6 +99,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 | 變數 | 說明 | 範例 |
 |-----|------|------|
 | `DOCKERDIR` | 專案根目錄絕對路徑 | `/opt/docker` |
+| `DATADIR` | 容器運行時資料路徑 | `/mnt/raid1` |
 | `TZ` | 時區 | `Asia/Taipei` |
 | `DOMAINNAME_1` | 主要網域 | `example.com` |
 | `TRAEFIK_PORT` | Traefik Dashboard 主機埠 | `8080` |
@@ -154,6 +157,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 4. [ ] 設定正確的 Traefik labels
 5. [ ] 使用 middleware chain 保護端點
 6. [ ] 敏感資料使用 Secrets 或環境變數
+7. [ ] 運行時資料掛載到 `${DATADIR}/service-name/`（不使用 `appdata/`）
 
 ## 維護任務
 
