@@ -32,3 +32,17 @@ scrape_configs:
       - targets: ['traefik:8080']
         labels:
           instance: 'traefik'
+
+  # Node Exporter - 主機層級指標 (CPU, RAM, Disk, Network)
+  - job_name: 'node-exporter'
+    static_configs:
+      - targets: ['node-exporter:9100']
+        labels:
+          instance: 'homeserver'
+
+  # cAdvisor - 容器層級指標
+  - job_name: 'cadvisor'
+    static_configs:
+      - targets: ['cadvisor:8080']
+        labels:
+          instance: 'homeserver'
