@@ -1,0 +1,33 @@
+# cAdvisor - Container Metrics Exporter for Prometheus
+# Ref: https://github.com/google/cadvisor
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+# 用途: 收集容器層級指標 (CPU, RAM, Network per container)
+
+services:
+  cadvisor:
+    container_name: cadvisor
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    profiles:
+      - monitor
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    privileged: true  # cAdvisor 需要存取 cgroups 與 Docker
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker:/var/lib/docker:ro
+      - /dev/disk:/dev/disk:ro
+    environment:
+      - TZ=${TZ:-UTC}
+    command:
+      - --housekeeping_interval=30s
+      - --docker_only=true  # 僅收集 Docker 容器指標
+      - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl
+    # 不對外暴露，僅供 Prometheus 內部抓取
+    # Port: 8080 (container internal)
