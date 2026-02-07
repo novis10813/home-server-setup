@@ -29,6 +29,12 @@
 ├── docker-compose-infrastructure.yml  # 主入口 Compose（include 子檔案）
 ├── .env.example                        # 環境變數範本（複製為 .env 使用）
 ├── .env                                # 本機環境變數（勿提交）
+├── mkdocs.yml                          # MkDocs 導航與主題設定
+├── requirements-docs.txt              # MkDocs 依賴（mkdocs、mkdocs-material）
+├── docs/                               # 設定文件（Markdown 來源）
+│   ├── README.md                       # 文件首頁
+│   ├── infrastructure/                # Infrastructure 類說明（架構、設定、服務、Traefik 規則、操作）
+│   └── app/                            # App 類說明（目前佔位）
 ├── compose/
 │   └── infrastructure/
 │       ├── traefik.yml                 # Traefik 反向代理服務定義
@@ -50,6 +56,12 @@
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
 ```
+
+### 設定文件（docs）
+
+- **用途**：專案設定與操作說明，依 Compose 職責分層（Infrastructure、App…），與 AGENTS.md 互補；詳細內容以 `docs/` 為準。
+- **建置**：MkDocs（`mkdocs.yml` 定義導航）。預覽：`mkdocs serve`；建置靜態站：`mkdocs build`（輸出 `site/`，已 .gitignore）。依賴見 `requirements-docs.txt`。
+- **新增文件**：新 Compose 類型（例如 App、Media）請在 `docs/` 下新增對應目錄與 .md，並在 `mkdocs.yml` 的 `nav` 加入該區塊。
 
 ## 常用指令
 

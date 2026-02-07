@@ -48,8 +48,28 @@ Dashboard：`https://traefik.<DOMAINNAME_1>`（需能解析該網域並通過 Ba
 
 ---
 
+## 設定文件（docs）
+
+專案設定與操作說明放在 **`docs/`**，可依 **Compose 職責** 分層查閱：
+
+- **Infrastructure** — 網關（Traefik、Socket Proxy、OAuth、Pi-hole）的架構、環境變數、服務定義、Traefik 規則、操作與疑難排解
+- **App** — 應用類服務（目前為佔位，待補充）
+
+以 [MkDocs](https://www.mkdocs.org/) + Material 主題建置成網頁後，左側導航即為上述層級。建置方式：
+
+```bash
+pip install -r requirements-docs.txt
+mkdocs serve    # 本地預覽 http://127.0.0.1:8000
+mkdocs build    # 輸出至 site/
+```
+
+設定檔：`mkdocs.yml`（導航）、`docs/`（Markdown 來源）。建置輸出 `site/` 已列入 `.gitignore`。
+
+---
+
 ## 目錄結構（概要）
 
+- `docs/` — 設定文件（Infrastructure / App 分層；見上方「設定文件」）
 - `compose/infrastructure/` — 網關服務定義（socket-proxy.yml、traefik.yml）  
 - `appdata/traefik/` — Traefik 動態規則、ACME 憑證  
 - `configs/` — 其他服務設定檔  
