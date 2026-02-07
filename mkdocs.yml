@@ -1,0 +1,48 @@
+# MkDocs - Home Server Docker 設定文件
+# 本地預覽: mkdocs serve
+# 建置靜態站: mkdocs build
+
+site_name: Home Server Docker 文件
+site_description: Home Server Docker 服務設定與操作說明
+site_url: null  # 若部署到固定網址可填
+
+theme:
+  name: material
+  language: zh
+  palette:
+    - scheme: default
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: 切換深色模式
+    - scheme: slate
+      primary: indigo
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: 切換淺色模式
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - toc.integrate
+    - content.code.copy
+
+plugins:
+  - search
+
+nav:
+  - 首頁: README.md
+  - Infrastructure:
+    - 概述: infrastructure/README.md
+    - 架構與目錄: infrastructure/architecture.md
+    - 設定與環境: infrastructure/configuration.md
+    - 服務說明: infrastructure/services.md
+    - Traefik 規則: infrastructure/traefik-rules.md
+    - 操作與維護: infrastructure/operations.md
+  - App:
+    - 概述: app/README.md
+
+markdown_extensions:
+  - pymdownx.superfences
+  - tables

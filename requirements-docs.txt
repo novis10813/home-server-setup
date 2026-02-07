@@ -1,0 +1,4 @@
+# MkDocs 與主題，用於建置文件網頁
+# 使用: pip install -r requirements-docs.txt
+mkdocs>=1.6,<2
+mkdocs-material>=9.5,<10

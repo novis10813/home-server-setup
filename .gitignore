@@ -3,3 +3,5 @@ secrets/*
 !secrets/README.md
 appdata/traefik/acme/acme.json
 logs/
+# MkDocs 建置輸出
+site/
