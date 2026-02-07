@@ -28,6 +28,8 @@ secrets:
     file: ${DOCKERDIR}/secrets/google_oauth_client_id
   google_oauth_client_secret:
     file: ${DOCKERDIR}/secrets/google_oauth_client_secret
+  grafana_admin_password:
+    file: ${DOCKERDIR}/secrets/grafana_admin_password
 
 ########################### INCLUDES
 include:
@@ -35,3 +37,6 @@ include:
   - compose/infrastructure/traefik.yml
   - compose/infrastructure/traefik-forward-auth.yml
   - compose/infrastructure/pihole.yml
+  # Monitoring (profile: monitor)
+  - compose/infrastructure/prometheus.yml
+  - compose/infrastructure/grafana.yml
