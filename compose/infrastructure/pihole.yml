@@ -36,8 +36,6 @@ services:
       # HTTPS Router
       - "traefik.http.routers.pihole-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.pihole-rtr.rule=Host(`pihole.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.pihole-rtr.tls=true"
-      - "traefik.http.routers.pihole-rtr.tls.certresolver=dns-cloudflare"
       - "traefik.http.routers.pihole-rtr.service=pihole-svc"
       - "traefik.http.routers.pihole-rtr.middlewares=pihole-redirect,chain-oauth@file"
       # Service

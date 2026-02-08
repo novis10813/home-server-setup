@@ -40,8 +40,6 @@ services:
       ## HTTPS Router
       - "traefik.http.routers.immich-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.immich-rtr.rule=Host(`immich.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.immich-rtr.tls=true"
-      - "traefik.http.routers.immich-rtr.tls.certresolver=dns-cloudflare"
       - "traefik.http.routers.immich-rtr.middlewares=chain-immich@file"
       ## Middlewares - 使用 Immich 內建認證，僅套用安全標頭
       ## Service

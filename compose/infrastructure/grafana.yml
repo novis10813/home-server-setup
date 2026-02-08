@@ -38,8 +38,6 @@ services:
       # Router - 內網存取
       - "traefik.http.routers.grafana-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.grafana-rtr.rule=Host(`grafana.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.grafana-rtr.tls=true"
-      - "traefik.http.routers.grafana-rtr.tls.certresolver=dns-cloudflare"
       - "traefik.http.routers.grafana-rtr.middlewares=chain-oauth@file"
       - "traefik.http.routers.grafana-rtr.service=grafana-svc"
       # Service
