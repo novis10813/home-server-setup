@@ -1,0 +1,5 @@
+http:
+  middlewares:
+    middlewares-permissions-policy-camera-self:
+      headers:
+        permissionsPolicy: "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"

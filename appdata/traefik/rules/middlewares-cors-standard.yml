@@ -1,0 +1,12 @@
+http:
+  middlewares:
+    middlewares-cors-standard:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+          - OPTIONS
+        accessControlMaxAge: 100

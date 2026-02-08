@@ -1,0 +1,19 @@
+# App stack: Application services
+# Usage: docker compose -f docker-compose-app.yml up -d
+
+########################### NETWORKS
+networks:
+  default:
+    driver: bridge
+  t3_proxy:
+    name: t3_proxy
+    external: true
+
+########################### SECRETS
+secrets:
+  immich_db_password:
+    file: ${DOCKERDIR}/secrets/immich_db_password
+
+########################### INCLUDES
+include:
+  - compose/apps/immich.yml

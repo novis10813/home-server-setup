@@ -1,0 +1,110 @@
+# Immich - Self-hosted photo and video management
+# https://immich.app/docs/install/docker-compose
+
+services:
+  ###########################################################################
+  # Immich Server
+  ###########################################################################
+  immich-server:
+    container_name: immich_server
+    image: ghcr.io/immich-app/immich-server:${IMMICH_VERSION:-release}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      immich-redis:
+        condition: service_started
+      immich-database:
+        condition: service_healthy
+    networks:
+      - default
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/immich/library:/usr/src/app/upload
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+      - REDIS_HOSTNAME=immich-redis
+      - DB_HOSTNAME=immich-database
+      - DB_DATABASE_NAME=immich
+      - DB_USERNAME=postgres
+      - DB_PASSWORD_FILE=/run/secrets/immich_db_password
+    secrets:
+      - immich_db_password
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.immich-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.immich-rtr-http.rule=Host(`immich.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.immich-rtr-http.middlewares=chain-immich@file"
+      ## HTTPS Router
+      - "traefik.http.routers.immich-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.immich-rtr.rule=Host(`immich.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.immich-rtr.tls=true"
+      - "traefik.http.routers.immich-rtr.tls.certresolver=dns-cloudflare"
+      - "traefik.http.routers.immich-rtr.middlewares=chain-immich@file"
+      ## Middlewares - 使用 Immich 內建認證，僅套用安全標頭
+      ## Service
+      - "traefik.http.routers.immich-rtr.service=immich-svc"
+      - "traefik.http.services.immich-svc.loadbalancer.server.port=2283"
+
+  ###########################################################################
+  # Immich Machine Learning
+  ###########################################################################
+  immich-machine-learning:
+    container_name: immich_machine_learning
+    image: ghcr.io/immich-app/immich-machine-learning:${IMMICH_VERSION:-release}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+    volumes:
+      - ${DATADIR}/immich/model-cache:/cache
+    environment:
+      - TZ=${TZ}
+
+  ###########################################################################
+  # Redis
+  ###########################################################################
+  immich-redis:
+    container_name: immich_redis
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  ###########################################################################
+  # PostgreSQL with VectorChord (升級後的新 image)
+  ###########################################################################
+  immich-database:
+    container_name: immich_postgres
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+    volumes:
+      - ${DATADIR}/immich/postgres:/var/lib/postgresql/data
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_PASSWORD_FILE=/run/secrets/immich_db_password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=immich
+      - POSTGRES_INITDB_ARGS=--data-checksums
+    secrets:
+      - immich_db_password
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d immich -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s

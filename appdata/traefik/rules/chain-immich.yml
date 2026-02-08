@@ -1,0 +1,9 @@
+http:
+  middlewares:
+    chain-immich:
+      chain:
+        middlewares:
+          - middlewares-rate-relaxed
+          - middlewares-permissions-policy-camera-self
+          - middlewares-cors-standard
+          - middlewares-secure-headers
