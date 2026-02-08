@@ -99,7 +99,7 @@ services:
       - basic_auth_credentials
     labels:
       - "traefik.enable=true"
-      - "traefik.http.routers.traefik-rtr.entrypoints=websecure-internal,websecure-external"
+      - "traefik.http.routers.traefik-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.traefik-rtr.rule=Host(`traefik.${DOMAINNAME_1}`)"
       - "traefik.http.routers.traefik-rtr.service=api@internal"
       - "traefik.http.routers.traefik-rtr.middlewares=chain-oauth@file"
