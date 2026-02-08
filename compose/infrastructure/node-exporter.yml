@@ -9,6 +9,7 @@ services:
     image: prom/node-exporter:v1.9.1
     profiles:
       - monitor
+      - all
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

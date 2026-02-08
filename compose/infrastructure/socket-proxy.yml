@@ -5,6 +5,9 @@ services:
   socket-proxy:
     image: lscr.io/linuxserver/socket-proxy:latest
     container_name: socket-proxy
+    profiles:
+      - all
+      - network
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

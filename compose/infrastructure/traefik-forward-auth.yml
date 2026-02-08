@@ -3,6 +3,9 @@ services:
   oauth:
     container_name: oauth
     image: ghcr.io/italypaleale/traefik-forward-auth:4
+    profiles:
+      - all
+      - network
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

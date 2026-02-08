@@ -9,6 +9,7 @@ services:
     image: gcr.io/cadvisor/cadvisor:v0.52.1
     profiles:
       - monitor
+      - all
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped

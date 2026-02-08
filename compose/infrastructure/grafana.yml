@@ -8,6 +8,7 @@ services:
     image: grafana/grafana:12.3.2
     profiles:
       - monitor
+      - all
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
@@ -30,9 +31,15 @@ services:
       - GF_LOG_LEVEL=info
     labels:
       - "traefik.enable=true"
-      # Router - 外部存取 (OAuth 認證)
-      - "traefik.http.routers.grafana-rtr.entrypoints=websecure-internal,websecure-external"
+      # Redirect to HTTPS
+      - "traefik.http.routers.grafana-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.grafana-rtr-http.rule=Host(`grafana.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.grafana-rtr-http.middlewares=chain-no-auth@file"
+      # Router - 內網存取
+      - "traefik.http.routers.grafana-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.grafana-rtr.rule=Host(`grafana.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.grafana-rtr.tls=true"
+      - "traefik.http.routers.grafana-rtr.tls.certresolver=dns-cloudflare"
       - "traefik.http.routers.grafana-rtr.middlewares=chain-oauth@file"
       - "traefik.http.routers.grafana-rtr.service=grafana-svc"
       # Service

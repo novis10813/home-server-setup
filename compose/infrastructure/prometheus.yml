@@ -8,6 +8,7 @@ services:
     image: prom/prometheus:v3.9.1
     profiles:
       - monitor
+      - all
     security_opt:
       - no-new-privileges:true
     restart: unless-stopped
@@ -28,10 +29,14 @@ services:
       - TZ=${TZ:-UTC}
     labels:
       - "traefik.enable=true"
-      # Router - 內網存取 (不套用 OAuth，僅限內網)
+      # Redirect to HTTPS
+      - "traefik.http.routers.prometheus-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.prometheus-rtr-http.rule=Host(`prometheus.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.prometheus-rtr-http.middlewares=chain-no-auth@file"
+      # Router - 內網存取
       - "traefik.http.routers.prometheus-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.prometheus-rtr.rule=Host(`prometheus.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.prometheus-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.prometheus-rtr.middlewares=chain-oauth@file"
       - "traefik.http.routers.prometheus-rtr.service=prometheus-svc"
       # Service
       - "traefik.http.services.prometheus-svc.loadbalancer.server.port=9090"
