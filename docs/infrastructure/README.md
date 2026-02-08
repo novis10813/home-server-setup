@@ -29,7 +29,7 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 
 - **啟動（不含監控）**：`docker compose -f docker-compose-infrastructure.yml up -d`
 - **啟動（含監控）**：`docker compose -f docker-compose-infrastructure.yml --profile monitor up -d`
-- **Dashboard**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
-- **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網，無認證）
+- **Dashboard（僅內網）**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
+- **Prometheus（僅內網）**：`https://prometheus.<DOMAINNAME_1>`（OAuth 保護）
 - **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
 - **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`

@@ -41,7 +41,8 @@ Chains 在 `appdata/traefik/rules/` 內以獨立檔案定義，供 Traefik label
 - Router：`<servicename>-rtr`（必要時加 `-http` 等後綴）。
 - Service：`<servicename>-svc`。
 - 規則格式：`traefik.http.routers.<name>.rule=Host(\`host.${DOMAINNAME_1}\`)`。
-- 需 TLS 時：`tls=true`、`tls.certresolver=dns-cloudflare`。
+- **TLS（建議）**：由 Traefik entrypoint 統一啟用（`websecure-*`），一般服務 **不需要** 在 router labels 重複設定 `tls=true` / `tls.certresolver`。
+  - 只有在「該服務需要不同的 TLS options / cert resolver / 憑證」時，才在該 router 上另外指定。
 - 需保護時：`middlewares=chain-oauth@file` 或 `chain-basic-auth@file` / `chain-no-auth@file`。
 
 ---

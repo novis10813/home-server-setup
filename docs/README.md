@@ -11,7 +11,7 @@
 | 區塊 | 說明 |
 |------|------|
 | [Infrastructure](infrastructure/README.md) | 網關（Traefik、Socket Proxy、OAuth、Pi-hole）+ 監控（Prometheus、Grafana）— 架構、設定、服務、Traefik 規則、操作與維護 |
-| [App](app/README.md) | 應用類服務（尚未有設定，待補充） |
+| [App](app/README.md) | 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich） |
 
 ---
 
@@ -19,9 +19,11 @@
 
 - **主 Compose（不含監控）**：`docker compose -f docker-compose-infrastructure.yml up -d`
 - **主 Compose（含監控）**：`docker compose -f docker-compose-infrastructure.yml --profile monitor up -d`
-- **Dashboard**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
+- **Dashboard（僅內網）**：`https://traefik.<DOMAINNAME_1>`（OAuth 保護）
 - **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網）
 - **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
+- **App Compose**：`docker compose -f docker-compose-app.yml up -d`
+- **Immich**：`https://immich.<DOMAINNAME_1>`（僅內網）
 - **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`
 - **敏感檔**：`secrets/`、`.env`（勿提交版控）
 

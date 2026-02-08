@@ -12,7 +12,7 @@
 | `LOCAL_IPS` | 信任的內網/本機 IP（CIDR，逗號分隔），用於 X-Forwarded-* | `127.0.0.1/32,10.0.0.0/8,192.168.0.0/16,172.16.0.0/12` |
 | `CLOUDFLARE_IPS` | Cloudflare 代理 IP 範圍（選填，見 [Cloudflare IPs](https://www.cloudflare.com/ips/)） | 見 `.env.example` |
 | `DOMAINNAME_1` | 主要網域；Dashboard 為 `traefik.<DOMAINNAME_1>` | `example.com` |
-| `TRAEFIK_PORT` | Traefik Dashboard 主機埠 | `8080` |
+| `TRAEFIK_PORT` | Traefik API/Dashboard（insecure）主機埠（建議僅內網或以防火牆限制） | `8080` |
 | `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth Client ID（可放 .env） | `xxxx.apps.googleusercontent.com` |
 | `HOST_IP` | 主機 IP（Pi-hole 等用途，建議與本機 IP 一致） | `192.168.x.x` |
 

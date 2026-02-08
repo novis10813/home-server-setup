@@ -32,8 +32,18 @@
   - `traefik`：8080（Dashboard API）
 - **Provider**：Docker 經 Socket Proxy（`tcp://socket-proxy:2375`）、File 動態規則（`/rules`）。
 - **TLS**：Let's Encrypt DNS-Cloudflare（`acme.json`）、TLS 選項 `tls-opts@file`。
-- **Dashboard**：`Host(traefik.${DOMAINNAME_1})`，middleware：`chain-oauth@file`。
+- **Dashboard**：`Host(traefik.${DOMAINNAME_1})`，middleware：`chain-oauth@file`（**僅內網**：`websecure-internal`）。
 - **掛載**：`appdata/traefik/rules` → `/rules`、`appdata/traefik/acme/acme.json` → `/acme.json`、`logs/traefik` → `/logs`。
+
+### 對內 / 對外開放清單（以 Traefik Router entrypoints 為準）
+
+| 服務 | Host | 內網（Internal） | 外網（External） | 保護方式 |
+|------|------|------------------|------------------|----------|
+| Traefik Dashboard | `traefik.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `chain-oauth@file` |
+| OAuth Portal | `auth.${DOMAINNAME_1}` | ✅ `websecure-internal` | ✅ `websecure-external` | `chain-no-auth@file`（登入頁本身不再套 OAuth） |
+| Pi-hole | `pihole.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `pihole-redirect` + `chain-oauth@file` |
+| Prometheus | `prometheus.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `chain-oauth@file` |
+| Grafana | `grafana.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `chain-oauth@file` |
 
 ---
 
@@ -44,7 +54,7 @@
 - **容器名**：`oauth`
 - **網路**：`t3_proxy`
 - **用途**：提供 OAuth 2.0 登入，供 Traefik 的 `forwardAuth` middleware 使用。
-- **對外**：`Host(auth.${DOMAINNAME_1})`，middleware：`chain-no-auth@file`，port 4181。
+- **入口**：`Host(auth.${DOMAINNAME_1})`，middleware：`chain-no-auth@file`，port 4181（目前同時掛在內/外網 HTTPS entrypoints）。
 - **Secrets**：`tfa_config`（設定檔）、`google_oauth_client_secret`。
 
 ---
@@ -74,7 +84,7 @@
 - **資料**：`${DATADIR}/prometheus/` → `/prometheus`（運行時資料）
 - **設定**：`${DOCKERDIR}/appdata/prometheus/prometheus.yml` → `/etc/prometheus/prometheus.yml`（抓取設定）
 - **Traefik**：
-  - `prometheus.${DOMAINNAME_1}`：HTTPS、`chain-no-auth@file`（僅內網存取）
+  - `prometheus.${DOMAINNAME_1}`：HTTPS、`chain-oauth@file`（OAuth 保護、僅內網存取）
   - 僅使用 `websecure-internal` entrypoint，不對外開放
 
 ### 預設 Scrape Targets
@@ -134,7 +144,7 @@
 - **Secrets**：`grafana_admin_password`（管理員密碼，以 bind mount 掛載）
 - **Traefik**：
   - `grafana.${DOMAINNAME_1}`：HTTPS、`chain-oauth@file`（OAuth 保護）
-  - 使用 `websecure-internal` 與 `websecure-external` entrypoints（內外網皆可存取）
+  - 僅使用 `websecure-internal` entrypoint（僅內網存取）
 - **環境**：
   - `GF_SECURITY_ADMIN_USER=admin`
   - `GF_SECURITY_ADMIN_PASSWORD__FILE=/run/secrets/grafana_admin_password`

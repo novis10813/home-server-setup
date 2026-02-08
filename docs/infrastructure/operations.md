@@ -49,10 +49,10 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 
 ## 存取位址（範例）
 
-- **Traefik Dashboard**：`https://traefik.<DOMAINNAME_1>`（經 OAuth）
-- **OAuth 登入**：`https://auth.<DOMAINNAME_1>`
+- **Traefik Dashboard（僅內網）**：`https://traefik.<DOMAINNAME_1>`（經 OAuth）
+- **OAuth Portal**：`https://auth.<DOMAINNAME_1>`（目前同時掛在內/外網 HTTPS entrypoints，用於登入流程）
 - **Pi-hole 管理**：`https://pihole.<DOMAINNAME_1>`（經 OAuth）
-- 對外埠：80/81（HTTP）、443/444（HTTPS）、`TRAEFIK_PORT`（API）
+- 對外埠：80/81（HTTP）、443/444（HTTPS）、`TRAEFIK_PORT`（Traefik API；若啟用 `api.insecure=true`，務必以防火牆限制僅內網）
 
 ---
 
