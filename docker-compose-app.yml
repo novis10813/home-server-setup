@@ -16,4 +16,5 @@ secrets:
 
 ########################### INCLUDES
 include:
+  - compose/apps/calibre-web.yml
   - compose/apps/immich.yml
