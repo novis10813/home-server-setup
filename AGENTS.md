@@ -15,7 +15,7 @@
 - **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
-1. **職責分離**：依服務類型劃分 Compose 檔案（目前僅有 `infrastructure`）
+1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure` 與 `app`）
 2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
 3. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
 4. **配置與資料分離**：
@@ -28,6 +28,7 @@
 ```
 /opt/docker/
 ├── docker-compose-infrastructure.yml  # 主入口 Compose（include 子檔案）
+├── docker-compose-app.yml             # App 入口 Compose（include 子檔案）
 ├── .env.example                        # 環境變數範本（複製為 .env 使用）
 ├── .env                                # 本機環境變數（勿提交）
 ├── mkdocs.yml                          # MkDocs 導航與主題設定
@@ -37,14 +38,16 @@
 │   ├── infrastructure/                # Infrastructure 類說明（架構、設定、服務、Traefik 規則、操作）
 │   └── app/                            # App 類說明（目前佔位）
 ├── compose/
-│   └── infrastructure/
-│       ├── traefik.yml                 # Traefik 反向代理服務定義
-│       ├── socket-proxy.yml            # Docker API 安全代理
-│       ├── traefik_forward_auth.yml    # OAuth SSO 服務
-│       ├── prometheus.yml              # Prometheus 監控（profile: monitor）
-│       ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
-│       ├── node-exporter.yml           # 主機指標（profile: monitor）
-│       └── cadvisor.yml                # 容器指標（profile: monitor）
+│   ├── infrastructure/
+│   │   ├── traefik.yml                 # Traefik 反向代理服務定義
+│   │   ├── socket-proxy.yml            # Docker API 安全代理
+│   │   ├── traefik_forward_auth.yml    # OAuth SSO 服務
+│   │   ├── prometheus.yml              # Prometheus 監控（profile: monitor）
+│   │   ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
+│   │   ├── node-exporter.yml           # 主機指標（profile: monitor）
+│   │   └── cadvisor.yml                # 容器指標（profile: monitor）
+│   └── apps/
+│       └── immich.yml                  # Immich（App）
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
@@ -62,37 +65,6 @@
 - **用途**：專案設定與操作說明，依 Compose 職責分層（Infrastructure、App…），與 AGENTS.md 互補；詳細內容以 `docs/` 為準。
 - **建置**：MkDocs（`mkdocs.yml` 定義導航）。預覽：`mkdocs serve`；建置靜態站：`mkdocs build`（輸出 `site/`，已 .gitignore）。依賴見 `requirements-docs.txt`。
 - **新增文件**：新 Compose 類型（例如 App、Media）請在 `docs/` 下新增對應目錄與 .md，並在 `mkdocs.yml` 的 `nav` 加入該區塊。
-
-## 常用指令
-
-### 啟動 / 停止 / 日誌
-
-```bash
-# 啟動網關服務
-docker compose -f docker-compose-infrastructure.yml up -d
-
-# 檢視即時日誌
-docker compose -f docker-compose-infrastructure.yml logs -f
-
-# 僅檢視特定服務日誌
-docker compose -f docker-compose-infrastructure.yml logs -f traefik
-
-# 停止所有服務
-docker compose -f docker-compose-infrastructure.yml down
-
-# 重啟特定服務
-docker compose -f docker-compose-infrastructure.yml restart traefik
-```
-
-### 設定驗證
-
-```bash
-# 驗證 Compose 語法
-docker compose -f docker-compose-infrastructure.yml config
-
-# 檢查 Traefik 設定（進入容器）
-docker exec traefik traefik healthcheck
-```
 
 ### 憑證與 Secrets
 
@@ -114,7 +86,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 | `DATADIR` | 容器運行時資料路徑 | `/mnt/raid1` |
 | `TZ` | 時區 | `Asia/Taipei` |
 | `DOMAINNAME_1` | 主要網域 | `example.com` |
-| `TRAEFIK_PORT` | Traefik Dashboard 主機埠 | `8080` |
+| `TRAEFIK_PORT` | Traefik API/Dashboard（insecure）主機埠（建議僅內網或以防火牆限制） | `8080` |
 | `LOCAL_IPS` | 信任的內網 IP CIDR | `192.168.0.0/16,10.0.0.0/8` |
 | `CLOUDFLARE_IPS` | Cloudflare IP 範圍 | 見 `.env.example` |
 
@@ -128,7 +100,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 ### 埠對應
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
-- `${TRAEFIK_PORT}`：Dashboard API
+- `${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，建議僅內網或以防火牆限制）
 
 ## 程式碼風格指南
 

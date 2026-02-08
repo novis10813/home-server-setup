@@ -11,6 +11,7 @@
 | Compose 檔案 | 職責 | 說明 |
 |-------------|------|------|
 | `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Prometheus + Grafana |
+| `docker-compose-app.yml` | 應用（App） | Immich（以及後續其他應用服務） |
 
 後續若有其他類型（例如媒體服務、資料庫、自動化等），可再新增對應的 Compose 檔並在此表補充。
 
@@ -50,10 +51,10 @@ docker compose -f docker-compose-infrastructure.yml logs -f
 docker compose -f docker-compose-infrastructure.yml down
 ```
 
-Dashboard：`https://traefik.<DOMAINNAME_1>`（需能解析該網域並通過 Basic Auth）。對外埠：80/81（HTTP）、443/444（HTTPS）、`TRAEFIK_PORT`（API）。
+Dashboard：`https://traefik.<DOMAINNAME_1>`（OAuth 保護、僅內網）。對外埠：80/81（HTTP）、443/444（HTTPS）、`TRAEFIK_PORT`（Traefik API；若啟用 insecure，務必以防火牆限制僅內網）。
 
 監控服務：
-- **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網，無認證）
+- **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網，OAuth 保護）
 - **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
 
 ---
@@ -63,7 +64,7 @@ Dashboard：`https://traefik.<DOMAINNAME_1>`（需能解析該網域並通過 Ba
 專案設定與操作說明放在 **`docs/`**，可依 **Compose 職責** 分層查閱：
 
 - **Infrastructure** — 網關（Traefik、Socket Proxy、OAuth、Pi-hole）的架構、環境變數、服務定義、Traefik 規則、操作與疑難排解
-- **App** — 應用類服務（目前為佔位，待補充）
+- **App** — 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich）
 
 以 [MkDocs](https://www.mkdocs.org/) + Material 主題建置成網頁後，左側導航即為上述層級。建置方式：
 
@@ -80,13 +81,11 @@ mkdocs build    # 輸出至 site/
 ## 目錄結構（概要）
 
 - `docs/` — 設定文件（Infrastructure / App 分層；見上方「設定文件」）
-- `compose/infrastructure/` — 網關與監控服務定義（socket-proxy.yml、traefik.yml、prometheus.yml、grafana.yml）  
+- `compose/infrastructure/` — 網關與監控服務定義（socket-proxy.yml、traefik.yml、prometheus.yml、grafana.yml…）  
+- `compose/apps/` — App 類服務定義（例如 immich.yml）
 - `appdata/traefik/` — Traefik 動態規則、ACME 憑證
 - `appdata/prometheus/` — Prometheus 設定檔  
-- `configs/` — 其他服務設定檔  
-- `credentials/` — 環境變數與憑證（不提交版控）  
 - `secrets/` — 密碼、API Token（見 `secrets/README.md`）  
-- `logs/` — 服務日誌（可加入 `.gitignore`）  
 
 ---
 
