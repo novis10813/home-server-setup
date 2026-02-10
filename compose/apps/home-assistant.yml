@@ -1,0 +1,24 @@
+# Home Assistant - Home automation
+# https://www.home-assistant.io/installation/linux#install-home-assistant-container
+# Default: bridge network; for mDNS/Bluetooth discovery see docs/app/home-assistant.md (host mode)
+
+services:
+  ###########################################################################
+  # Home Assistant
+  ###########################################################################
+  home-assistant:
+    container_name: home-assistant
+    image: ghcr.io/home-assistant/home-assistant:${HOMEASSISTANT_VERSION:-stable}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    network_mode: host
+    volumes:
+      - ${DATADIR}/homeassistant:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+
+    cap_add:
+      - NET_ADMIN
+      - NET_RAW
