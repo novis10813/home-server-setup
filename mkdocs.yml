@@ -43,6 +43,8 @@ nav:
   - App:
     - 概述: app/README.md
     - Home Assistant: app/home-assistant.md
+  - Media:
+    - 概述: media/README.md
 
 markdown_extensions:
   - pymdownx.superfences

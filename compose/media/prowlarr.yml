@@ -1,0 +1,33 @@
+# Prowlarr - Indexer manager for Sonarr/Radarr
+# https://docs.linuxserver.io/images/docker-prowlarr/
+
+services:
+  prowlarr:
+    container_name: prowlarr
+    image: lscr.io/linuxserver/prowlarr:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/prowlarr:/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.prowlarr-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.prowlarr-rtr-http.rule=Host(`prowlarr.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.prowlarr-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.prowlarr-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.prowlarr-rtr.rule=Host(`prowlarr.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.prowlarr-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.prowlarr-rtr.service=prowlarr-svc"
+      - "traefik.http.services.prowlarr-svc.loadbalancer.server.port=9696"

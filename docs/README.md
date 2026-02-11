@@ -12,6 +12,7 @@
 |------|------|
 | [Infrastructure](infrastructure/README.md) | 網關（Traefik、Socket Proxy、OAuth、Pi-hole）+ 監控（Prometheus、Grafana）— 架構、設定、服務、Traefik 規則、操作與維護 |
 | [App](app/README.md) | 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich） |
+| [Media](media/README.md) | 媒體服務（Jellyfin + Sonarr/Radarr/Prowlarr/qBittorrent） |
 
 ---
 
@@ -24,6 +25,8 @@
 - **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
 - **App Compose**：`docker compose -f docker-compose-app.yml up -d`
 - **Immich**：`https://immich.<DOMAINNAME_1>`（僅內網）
+- **Media Compose**：`docker compose -f docker-compose-media.yml up -d`
+- **Jellyfin**：`https://jellyfin.<DOMAINNAME_1>`（僅內網）
 - **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`
 - **敏感檔**：`secrets/`、`.env`（勿提交版控）
 

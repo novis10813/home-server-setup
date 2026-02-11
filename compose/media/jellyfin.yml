@@ -1,0 +1,40 @@
+# Jellyfin - Media streaming server
+# https://docs.linuxserver.io/images/docker-jellyfin/
+
+services:
+  jellyfin:
+    container_name: jellyfin
+    image: lscr.io/linuxserver/jellyfin:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+      - t3_proxy
+    devices:
+      - /dev/dri:/dev/dri
+    volumes:
+      - ${DATADIR}/jellyfin:/config
+      - ${DATADIR}/media:/data/media:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+      - JELLYFIN_PublishedServerUrl=https://jellyfin.${DOMAINNAME_1}
+    group_add:
+      - "44"
+      - "110"
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.jellyfin-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.jellyfin-rtr-http.rule=Host(`jellyfin.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.jellyfin-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.jellyfin-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.jellyfin-rtr.rule=Host(`jellyfin.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.jellyfin-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.jellyfin-rtr.service=jellyfin-svc"
+      - "traefik.http.services.jellyfin-svc.loadbalancer.server.port=8096"

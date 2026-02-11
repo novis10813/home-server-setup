@@ -1,0 +1,19 @@
+# Media stack: Jellyfin + *arr + qBittorrent
+# Usage: docker compose -f docker-compose-media.yml up -d
+
+########################### NETWORKS
+networks:
+  default:
+    driver: bridge
+  t3_proxy:
+    name: t3_proxy
+    external: true
+
+########################### INCLUDES
+include:
+  - compose/media/jellyfin.yml
+  - compose/media/jellyseerr.yml
+  - compose/media/sonarr.yml
+  - compose/media/radarr.yml
+  - compose/media/prowlarr.yml
+  - compose/media/qbittorrent.yml
