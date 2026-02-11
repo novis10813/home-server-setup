@@ -1,0 +1,32 @@
+# Jellyseerr - Media request management for Jellyfin
+# https://docs.linuxserver.io/images/docker-jellyseerr/
+
+services:
+  jellyseerr:
+    container_name: jellyseerr
+    image: ghcr.io/fallenbagel/jellyseerr:latest
+    init: true
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/jellyseerr:/app/config
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.jellyseerr-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.jellyseerr-rtr-http.rule=Host(`jellyseerr.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.jellyseerr-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.jellyseerr-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.jellyseerr-rtr.rule=Host(`jellyseerr.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.jellyseerr-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.jellyseerr-rtr.service=jellyseerr-svc"
+      - "traefik.http.services.jellyseerr-svc.loadbalancer.server.port=5055"
