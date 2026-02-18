@@ -1,0 +1,29 @@
+# Minecraft Java Edition - Vanilla server
+# Image: https://github.com/itzg/docker-minecraft-server
+# 遊戲連線埠：25565（TCP），不需經 Traefik
+
+services:
+  ###########################################################################
+  # Minecraft Server
+  ###########################################################################
+  minecraft:
+    container_name: minecraft
+    image: itzg/minecraft-server:${MINECRAFT_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tty: true
+    stdin_open: true
+    networks:
+      - default
+    ports:
+      - "${MINECRAFT_PORT:-25565}:25565"
+    volumes:
+      - ${DATADIR}/minecraft:/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+      - EULA=TRUE
+      - VERSION=${MINECRAFT_VERSION:-1.21.4}
+      - TYPE=VANILLA
+      - MEMORY=${MINECRAFT_MEMORY:-2G}
