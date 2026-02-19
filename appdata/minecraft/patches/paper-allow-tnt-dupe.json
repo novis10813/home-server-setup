@@ -1,0 +1,12 @@
+{
+  "file": "/data/config/paper-global.yml",
+  "ops": [
+    {
+      "$set": {
+        "path": "$.unsupported-settings.allow-piston-duplication",
+        "value": true,
+        "value-type": "bool"
+      }
+    }
+  ]
+}
