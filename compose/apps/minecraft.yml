@@ -1,4 +1,4 @@
-# Minecraft Java Edition - Vanilla server
+# Minecraft Java Edition - Fabric server（原味生存 + 伺服器端效能模組）
 # Image: https://github.com/itzg/docker-minecraft-server
 # 遊戲連線埠：25565（TCP），不需經 Traefik
 
@@ -25,5 +25,6 @@ services:
       - TZ=${TZ}
       - EULA=TRUE
       - VERSION=${MINECRAFT_VERSION:-1.21.4}
-      - TYPE=VANILLA
+      - TYPE=${MINECRAFT_TYPE:-FABRIC}
       - MEMORY=${MINECRAFT_MEMORY:-2G}
+      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,modernfix,lazydfu,alternate-current}
