@@ -27,4 +27,4 @@ services:
       - VERSION=${MINECRAFT_VERSION:-1.21.4}
       - TYPE=${MINECRAFT_TYPE:-FABRIC}
       - MEMORY=${MINECRAFT_MEMORY:-2G}
-      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,modernfix,lazydfu,alternate-current}
+      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servercore}
