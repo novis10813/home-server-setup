@@ -12,7 +12,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-    network_mode: host
     volumes:
       - ${DATADIR}/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
@@ -22,3 +21,20 @@ services:
     cap_add:
       - NET_ADMIN
       - NET_RAW
+    networks:
+      t3_proxy: {}
+      ha_macvlan:
+        ipv4_address: 192.168.0.250 # 給 Home Assistant 使用的 IP
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ha-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.ha-rtr.rule=Host(`ha.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.ha-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.ha-rtr.service=ha-svc"
+      - "traefik.http.services.ha-svc.loadbalancer.server.port=8123"
+
+networks:
+  t3_proxy:
+    external: true
+  ha_macvlan:
+    external: true
