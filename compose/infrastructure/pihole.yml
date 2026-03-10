@@ -15,7 +15,7 @@ services:
       - "53:53/tcp"
       - "53:53/udp"
       # - "67:67/udp" # 如果需要 DHCP
-      - "8053:80/tcp" # 管理介面備用存取
+      # - "8053:80/tcp" # 管理介面備用存取
     environment:
       TZ: ${TZ}
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:-admin}
