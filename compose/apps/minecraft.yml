@@ -18,6 +18,7 @@ services:
       - default
     ports:
       - "${MINECRAFT_PORT:-25565}:25565"
+      - "${VOICE_CHAT_PORT:-24454}:24454"
     volumes:
       - ${DATADIR}/minecraft:/data
       - /etc/localtime:/etc/localtime:ro
