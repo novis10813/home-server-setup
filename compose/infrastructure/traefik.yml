@@ -26,6 +26,8 @@ services:
       - --entrypoints.websecure-external.address=:444
       - --entrypoints.websecure-internal.address=:443
       - --entrypoints.traefik.address=:8080
+      - --entrypoints.minecraft.address=:25565
+      - --entrypoints.voicechat.address=:24454/udp
       - --entrypoints.websecure-external.http3=true
       - --entrypoints.websecure-internal.http3=true
       # HTTP -> HTTPS redirects
@@ -85,6 +87,8 @@ services:
       - "81:81"
       - "443:443"
       - "444:444"
+      - "25565:25565"
+      - "24454:24454/udp"
       - "${TRAEFIK_PORT:-8080}:8080"
     volumes:
       - ${DOCKERDIR}/appdata/traefik/rules:/rules:ro
