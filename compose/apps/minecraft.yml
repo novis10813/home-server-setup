@@ -26,7 +26,7 @@ services:
       - VERSION=${MINECRAFT_VERSION:-1.21.4}
       - TYPE=${MINECRAFT_TYPE:-FABRIC}
       - MEMORY=${MINECRAFT_MEMORY:-2G}
-      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servercore,chunky,bar,fabric-language-kotlin,simple-voice-chat}
+      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servercore,chunky,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux}
     labels:
       - "traefik.enable=true"
       # TCP Router for Minecraft (Server supports no SNI, so we use HostSNI(`*`))
