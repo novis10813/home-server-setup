@@ -13,6 +13,7 @@
 | [Infrastructure](infrastructure/README.md) | 網關（Traefik、Socket Proxy、OAuth、Pi-hole）+ 監控（Prometheus、Grafana）— 架構、設定、服務、Traefik 規則、操作與維護 |
 | [App](app/README.md) | 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich） |
 | [Media](media/README.md) | 媒體服務（Jellyfin + Sonarr/Radarr/Prowlarr/qBittorrent） |
+| [Home stack](homestack/README.md) | 自訂服務（`docker-compose-homestack.yml`，含 NATS / JetStream） |
 
 ---
 
@@ -27,7 +28,9 @@
 - **Immich**：`https://immich.<DOMAINNAME_1>`（僅內網）
 - **Media Compose**：`docker compose -f docker-compose-media.yml up -d`
 - **Jellyfin**：`https://jellyfin.<DOMAINNAME_1>`（僅內網）
-- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`
+- **Home stack Compose**：`docker compose -f docker-compose-homestack.yml up -d`
+- **NATS 監控（HTTP）**：`https://nats.<DOMAINNAME_1>`（僅內網；客戶端協定 4222 見 [NATS 說明](homestack/nats.md)）
+- **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`、`appdata/nats/`
 - **敏感檔**：`secrets/`、`.env`（勿提交版控）
 
 參考資源：[SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)、[Traefik v3 文件](https://doc.traefik.io/traefik/)。

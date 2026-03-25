@@ -11,9 +11,11 @@
 | Compose 檔案 | 職責 | 說明 |
 |-------------|------|------|
 | `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Prometheus + Grafana |
-| `docker-compose-app.yml` | 應用（App） | Immich（以及後續其他應用服務） |
+| `docker-compose-app.yml` | 應用（App） | Immich、Home Assistant、Minecraft 等（見 `compose/apps/`） |
+| `docker-compose-media.yml` | 媒體（Media） | Jellyfin、*arr、qBittorrent 等 |
+| `docker-compose-homestack.yml` | 自訂（Home stack） | NATS / JetStream 與其它自訂程式（見 `compose/homestack/`） |
 
-後續若有其他類型（例如媒體服務、資料庫、自動化等），可再新增對應的 Compose 檔並在此表補充。
+若再新增類型，可補上對應 Compose 主檔並更新此表。
 
 ---
 
@@ -64,7 +66,9 @@ Dashboard：`https://traefik.<DOMAINNAME_1>`（OAuth 保護、僅內網）。對
 專案設定與操作說明放在 **`docs/`**，可依 **Compose 職責** 分層查閱：
 
 - **Infrastructure** — 網關（Traefik、Socket Proxy、OAuth、Pi-hole）的架構、環境變數、服務定義、Traefik 規則、操作與疑難排解
-- **App** — 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich）
+- **App** — 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich、Home Assistant）
+- **Media** — 媒體服務（`docker-compose-media.yml`）
+- **Home stack** — 自訂服務與 NATS（`docker-compose-homestack.yml`，詳見 `docs/homestack/`）
 
 以 [MkDocs](https://www.mkdocs.org/) + Material 主題建置成網頁後，左側導航即為上述層級。建置方式：
 
@@ -80,11 +84,14 @@ mkdocs build    # 輸出至 site/
 
 ## 目錄結構（概要）
 
-- `docs/` — 設定文件（Infrastructure / App 分層；見上方「設定文件」）
+- `docs/` — 設定文件（Infrastructure / App / Media / Home stack；見上方「設定文件」）
 - `compose/infrastructure/` — 網關與監控服務定義（socket-proxy.yml、traefik.yml、prometheus.yml、grafana.yml…）  
-- `compose/apps/` — App 類服務定義（例如 immich.yml）
+- `compose/apps/` — App 類服務定義（例如 `immich.yml`）
+- `compose/media/` — Media 類服務定義
+- `compose/homestack/` — Home stack（例如 `nats.yml`）
 - `appdata/traefik/` — Traefik 動態規則、ACME 憑證
-- `appdata/prometheus/` — Prometheus 設定檔  
+- `appdata/prometheus/` — Prometheus 設定檔
+- `appdata/nats/` — NATS 主設定檔（`nats-server.conf`）
 - `secrets/` — 密碼、API Token（見 `secrets/README.md`）  
 
 ---

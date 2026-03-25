@@ -25,6 +25,6 @@ authorization {
 
 Refs: [Authentication](https://docs.nats.io/running-a-nats-service/configuration/securing_nats/auth_intro), [username/password](https://docs.nats.io/running-a-nats-service/configuration/securing_nats/username_password).
 
-Ensure these files exist before starting the Infrastructure stack.
+Ensure `basic_auth_credentials` and `cf_dns_api_token` exist before starting the **Infrastructure** stack.
 
-For Home stack NATS, also ensure `appdata/nats/nats-server.conf` exists (tracked in repo) and `nats_auth.conf` is present before `docker compose -f docker-compose-homestack.yml up -d`.
+For **Home stack NATS**, ensure `appdata/nats/nats-server.conf` exists (tracked in repo) and `nats_auth.conf` is present before `docker compose -f docker-compose-homestack.yml up -d`. See `docs/homestack/nats.md`.

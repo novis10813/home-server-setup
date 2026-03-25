@@ -15,7 +15,7 @@
 - **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
-1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure` 與 `app`）
+1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure`、`app`、`media`、`homestack` 等）
 2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
 3. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
 4. **配置與資料分離**：
@@ -29,6 +29,8 @@
 /opt/docker/
 ├── docker-compose-infrastructure.yml  # 主入口 Compose（include 子檔案）
 ├── docker-compose-app.yml             # App 入口 Compose（include 子檔案）
+├── docker-compose-media.yml           # Media 入口 Compose（可選）
+├── docker-compose-homestack.yml       # 自訂服務 / NATS（Home stack）
 ├── .env.example                        # 環境變數範本（複製為 .env 使用）
 ├── .env                                # 本機環境變數（勿提交）
 ├── mkdocs.yml                          # MkDocs 導航與主題設定
@@ -36,7 +38,9 @@
 ├── docs/                               # 設定文件（Markdown 來源）
 │   ├── README.md                       # 文件首頁
 │   ├── infrastructure/                # Infrastructure 類說明（架構、設定、服務、Traefik 規則、操作）
-│   └── app/                            # App 類說明（目前佔位）
+│   ├── app/                            # App 類說明
+│   ├── media/                          # Media 類說明
+│   └── homestack/                      # Home stack（自訂服務、NATS）
 ├── compose/
 │   ├── infrastructure/
 │   │   ├── traefik.yml                 # Traefik 反向代理服務定義
@@ -46,15 +50,19 @@
 │   │   ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
 │   │   ├── node-exporter.yml           # 主機指標（profile: monitor）
 │   │   └── cadvisor.yml                # 容器指標（profile: monitor）
-│   └── apps/
-│       └── immich.yml                  # Immich（App）
+│   ├── apps/
+│   │   └── immich.yml                 # Immich（App）
+│   └── homestack/
+│       └── nats.yml                    # NATS（Home stack）
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
 │   │   └── acme/
 │   │       └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
-│   └── prometheus/
-│       └── prometheus.yml              # Prometheus 抓取設定
+│   ├── prometheus/
+│   │   └── prometheus.yml             # Prometheus 抓取設定
+│   └── nats/
+│       └── nats-server.conf           # NATS 主設定（機密見 secrets/nats_auth.conf）
 ├── secrets/                            # 敏感檔案（勿提交版控）
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
@@ -64,7 +72,7 @@
 
 - **用途**：專案設定與操作說明，依 Compose 職責分層（Infrastructure、App…），與 AGENTS.md 互補；詳細內容以 `docs/` 為準。
 - **建置**：MkDocs（`mkdocs.yml` 定義導航）。預覽：`mkdocs serve`；建置靜態站：`mkdocs build`（輸出 `site/`，已 .gitignore）。依賴見 `requirements-docs.txt`。
-- **新增文件**：新 Compose 類型（例如 App、Media）請在 `docs/` 下新增對應目錄與 .md，並在 `mkdocs.yml` 的 `nav` 加入該區塊。
+- **新增文件**：新 Compose 類型（例如 App、Media、Home stack）請在 `docs/` 下新增對應目錄與 .md，並在 `mkdocs.yml` 的 `nav` 加入該區塊。
 
 ### 憑證與 Secrets
 

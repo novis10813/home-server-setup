@@ -45,6 +45,9 @@ nav:
     - Home Assistant: app/home-assistant.md
   - Media:
     - 概述: media/README.md
+  - Home stack:
+    - 概述: homestack/README.md
+    - NATS: homestack/nats.md
 
 markdown_extensions:
   - pymdownx.superfences
