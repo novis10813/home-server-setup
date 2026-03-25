@@ -1,0 +1,36 @@
+# NATS Server - 高性能訊息佇列與串流處理
+# https://docs.nats.io/running-a-nats-service/introduction
+# 僅對內網開放，不透過 Traefik 暴露 NATS 協定端口
+
+services:
+  nats:
+    container_name: nats
+    image: nats:${NATS_VERSION:-2.12.6-alpine}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DOCKERDIR}/appdata/nats/nats-server.conf:/nats-server.conf:ro
+      - ${DATADIR}/nats:/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ:-UTC}
+    secrets:
+      - nats_auth
+    command:
+      - nats-server
+      - -c
+      - /nats-server.conf
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nats-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.nats-rtr.rule=Host(`nats.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.nats-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.nats-rtr.service=nats-svc"
+      - "traefik.http.services.nats-svc.loadbalancer.server.port=8222"
+
+networks:
+  t3_proxy:
+    external: true
