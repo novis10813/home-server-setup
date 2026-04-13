@@ -1,0 +1,152 @@
+# Node Exporter Alert Rules
+# 主機層級監控告警（CPU, Memory, Disk, Network）
+
+groups:
+  - name: node-alerts
+    rules:
+      ### 服務可用性
+      - alert: InstanceDown
+        expr: up == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Instance {{ $labels.instance }} is down"
+          description: "{{ $labels.job }} on {{ $labels.instance }} has been down for more than 1 minute."
+
+      ### CPU 告警
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ printf \"%.1f\" $value }}% (threshold: 80%)"
+
+      - alert: CriticalCPUUsage
+        expr: 100 - (avg by(instance) (rate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical CPU usage on {{ $labels.instance }}"
+          description: "CPU usage is {{ printf \"%.1f\" $value }}% (threshold: 95%)"
+
+      ### Memory 告警
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ printf \"%.1f\" $value }}% (threshold: 85%)"
+
+      - alert: CriticalMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Critical memory usage on {{ $labels.instance }}"
+          description: "Memory usage is {{ printf \"%.1f\" $value }}% (threshold: 95%)"
+
+      ### Disk 告警
+      - alert: DiskSpaceLow
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} 
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"})) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk space low on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} is {{ printf \"%.1f\" $value }}% full (threshold: 80%)"
+
+      - alert: DiskSpaceCritical
+        expr: |
+          (1 - (node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"} 
+          / node_filesystem_size_bytes{fstype!~"tmpfs|overlay|squashfs"})) * 100 > 90
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Disk space critical on {{ $labels.instance }}"
+          description: "Disk {{ $labels.mountpoint }} is {{ printf \"%.1f\" $value }}% full (threshold: 90%)"
+
+      - alert: DiskWillFillIn24Hours
+        expr: |
+          predict_linear(node_filesystem_avail_bytes{fstype!~"tmpfs|overlay|squashfs"}[6h], 24*60*60) < 0
+        for: 30m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Disk {{ $labels.mountpoint }} will fill within 24 hours"
+          description: "Based on current trend, disk space will be exhausted in less than 24 hours."
+
+      ### Disk I/O 告警
+      - alert: HighDiskIOUtilization
+        expr: rate(node_disk_io_time_seconds_total[5m]) * 100 > 90
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High disk I/O on {{ $labels.instance }}"
+          description: "Disk {{ $labels.device }} I/O utilization is {{ printf \"%.1f\" $value }}%"
+
+      ### Network 告警
+      - alert: HighNetworkTrafficIn
+        expr: rate(node_network_receive_bytes_total{device!~"lo|docker.*|br-.*|veth.*"}[5m]) / 1024 / 1024 > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High inbound network traffic on {{ $labels.instance }}"
+          description: "{{ $labels.device }} receiving {{ printf \"%.1f\" $value }} MB/s"
+
+      - alert: HighNetworkTrafficOut
+        expr: rate(node_network_transmit_bytes_total{device!~"lo|docker.*|br-.*|veth.*"}[5m]) / 1024 / 1024 > 100
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High outbound network traffic on {{ $labels.instance }}"
+          description: "{{ $labels.device }} transmitting {{ printf \"%.1f\" $value }} MB/s"
+
+      - alert: NetworkInterfaceDown
+        expr: node_network_up{device!~"lo|docker.*|br-.*|veth.*"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Network interface {{ $labels.device }} is down"
+          description: "Network interface {{ $labels.device }} on {{ $labels.instance }} is down."
+
+      ### System 告警
+      - alert: HighLoadAverage
+        expr: node_load15 / count without(cpu, mode) (node_cpu_seconds_total{mode="idle"}) > 2
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High load average on {{ $labels.instance }}"
+          description: "15-minute load average is {{ printf \"%.2f\" $value }} per CPU core"
+
+      - alert: SystemTimeOutOfSync
+        expr: abs(node_timex_offset_seconds) > 0.5
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "System time out of sync on {{ $labels.instance }}"
+          description: "System time is {{ printf \"%.3f\" $value }}s off from NTP"
+
+      - alert: TooManyOpenFiles
+        expr: node_filefd_allocated / node_filefd_maximum * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Too many open file descriptors on {{ $labels.instance }}"
+          description: "{{ printf \"%.1f\" $value }}% of file descriptors are in use"

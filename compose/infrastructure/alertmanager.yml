@@ -1,0 +1,41 @@
+# Alertmanager - Alert Notification Handler for Prometheus
+# Ref: https://prometheus.io/docs/alerting/latest/alertmanager/
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+
+services:
+  alertmanager:
+    container_name: alertmanager
+    image: prom/alertmanager:v0.32.0
+    profiles:
+      - monitor
+      - all
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    user: "65534:65534"  # nobody:nogroup
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --web.external-url=https://alertmanager.${DOMAINNAME_1}
+    volumes:
+      - ${DOCKERDIR}/appdata/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - ${DOCKERDIR}/secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro
+      - ${DOCKERDIR}/secrets/discord_webhook_url:/run/secrets/discord_webhook_url:ro
+      - ${DATADIR}/alertmanager:/alertmanager
+    environment:
+      - TZ=${TZ:-UTC}
+    labels:
+      - "traefik.enable=true"
+      ### HTTP Redirect
+      - "traefik.http.routers.alertmanager-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.alertmanager-rtr-http.rule=Host(`alertmanager.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.alertmanager-rtr-http.middlewares=chain-no-auth@file"
+      ### HTTPS Router - 內網存取
+      - "traefik.http.routers.alertmanager-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.alertmanager-rtr.rule=Host(`alertmanager.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.alertmanager-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.alertmanager-rtr.service=alertmanager-svc"
+      ### Service
+      - "traefik.http.services.alertmanager-svc.loadbalancer.server.port=9093"

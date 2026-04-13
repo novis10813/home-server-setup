@@ -1,0 +1,112 @@
+# Container Alert Rules (cAdvisor)
+# 容器層級監控告警
+
+groups:
+  - name: container-alerts
+    rules:
+      ### 容器狀態告警
+      - alert: ContainerKilled
+        expr: time() - container_last_seen > 60
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} was killed"
+          description: "Container {{ $labels.name }} was killed or stopped more than 1 minute ago."
+
+      - alert: ContainerRestarting
+        expr: increase(container_start_time_seconds[10m]) > 3
+        for: 0m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is restarting frequently"
+          description: "Container {{ $labels.name }} has restarted {{ printf \"%.0f\" $value }} times in the last 10 minutes."
+
+      ### 容器 CPU 告警
+      - alert: ContainerHighCPU
+        expr: |
+          sum(rate(container_cpu_usage_seconds_total{name!=""}[5m])) by (name) 
+          / sum(container_spec_cpu_quota{name!=""} / container_spec_cpu_period{name!=""}) by (name) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high CPU usage"
+          description: "Container {{ $labels.name }} CPU usage is {{ printf \"%.1f\" $value }}% of its limit."
+
+      - alert: ContainerCPUThrottled
+        expr: |
+          sum(increase(container_cpu_cfs_throttled_periods_total{name!=""}[5m])) by (name) 
+          / sum(increase(container_cpu_cfs_periods_total{name!=""}[5m])) by (name) * 100 > 25
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} is being CPU throttled"
+          description: "Container {{ $labels.name }} is being throttled {{ printf \"%.1f\" $value }}% of the time."
+
+      ### 容器 Memory 告警
+      - alert: ContainerHighMemory
+        expr: |
+          container_memory_usage_bytes{name!=""} 
+          / container_spec_memory_limit_bytes{name!=""} * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high memory usage"
+          description: "Container {{ $labels.name }} memory usage is {{ printf \"%.1f\" $value }}% of its limit."
+
+      - alert: ContainerMemoryCritical
+        expr: |
+          container_memory_usage_bytes{name!=""} 
+          / container_spec_memory_limit_bytes{name!=""} * 100 > 95
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Container {{ $labels.name }} memory critical"
+          description: "Container {{ $labels.name }} memory usage is {{ printf \"%.1f\" $value }}% - may be OOM killed soon."
+
+      ### 容器 Network 告警
+      - alert: ContainerHighNetworkReceive
+        expr: rate(container_network_receive_bytes_total{name!=""}[5m]) / 1024 / 1024 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high network receive"
+          description: "Container {{ $labels.name }} is receiving {{ printf \"%.1f\" $value }} MB/s"
+
+      - alert: ContainerHighNetworkTransmit
+        expr: rate(container_network_transmit_bytes_total{name!=""}[5m]) / 1024 / 1024 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high network transmit"
+          description: "Container {{ $labels.name }} is transmitting {{ printf \"%.1f\" $value }} MB/s"
+
+      - alert: ContainerNetworkErrors
+        expr: |
+          rate(container_network_receive_errors_total{name!=""}[5m]) > 0 
+          or rate(container_network_transmit_errors_total{name!=""}[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} has network errors"
+          description: "Container {{ $labels.name }} is experiencing network errors."
+
+      ### 容器 Disk I/O 告警
+      - alert: ContainerHighDiskIO
+        expr: |
+          (rate(container_fs_reads_bytes_total{name!=""}[5m]) 
+          + rate(container_fs_writes_bytes_total{name!=""}[5m])) / 1024 / 1024 > 50
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Container {{ $labels.name }} high disk I/O"
+          description: "Container {{ $labels.name }} disk I/O is {{ printf \"%.1f\" $value }} MB/s"

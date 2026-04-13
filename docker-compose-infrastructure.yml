@@ -49,6 +49,7 @@ include:
   - compose/infrastructure/pihole.yml
   # Monitoring (profile: monitor)
   - compose/infrastructure/prometheus.yml
+  - compose/infrastructure/alertmanager.yml
   - compose/infrastructure/grafana.yml
   - compose/infrastructure/node-exporter.yml
   - compose/infrastructure/cadvisor.yml

@@ -24,6 +24,7 @@ services:
       - --web.enable-lifecycle  # 允許透過 API 重載設定
     volumes:
       - ${DOCKERDIR}/appdata/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ${DOCKERDIR}/appdata/prometheus/rules:/etc/prometheus/rules:ro
       - ${DATADIR}/prometheus:/prometheus
     environment:
       - TZ=${TZ:-UTC}

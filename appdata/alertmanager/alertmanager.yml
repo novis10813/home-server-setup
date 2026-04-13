@@ -1,0 +1,107 @@
+# Alertmanager Configuration
+# Ref: https://prometheus.io/docs/alerting/latest/configuration/
+
+global:
+  resolve_timeout: 5m
+
+# 通知模板（可選）
+# templates:
+#   - /etc/alertmanager/templates/*.tmpl
+
+route:
+  # 預設分組依據
+  group_by: ['alertname', 'severity', 'instance']
+  # 收到新告警後等待時間，讓同組告警一起發送
+  group_wait: 30s
+  # 同一組告警的發送間隔
+  group_interval: 5m
+  # 已發送告警的重複發送間隔
+  repeat_interval: 4h
+  # 預設接收者
+  receiver: 'telegram-only'
+
+  # 子路由規則
+  routes:
+    # 嚴重告警 - 縮短重複間隔
+    - match:
+        severity: critical
+      receiver: 'telegram-only'
+      repeat_interval: 1h
+      continue: false
+
+    # 一般告警
+    - match:
+        severity: warning
+      receiver: 'telegram-only'
+      repeat_interval: 4h
+
+receivers:
+  # Telegram + Discord 雙重通知
+  - name: 'telegram-discord'
+    telegram_configs:
+      - bot_token_file: /run/secrets/telegram_bot_token
+        # TODO: 替換為你的 Telegram Chat ID（使用 @userinfobot 獲取）
+        # 個人 Chat ID 為正數，群組 ID 為負數（如 -1001234567890）
+        chat_id: 123456789
+        parse_mode: HTML
+        message: |
+          {{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
+          {{ range .Alerts }}
+          <b>{{ .Labels.alertname }}</b> ({{ .Labels.severity }})
+          {{ if .Annotations.summary }}📝 {{ .Annotations.summary }}{{ end }}
+          {{ if .Annotations.description }}📋 {{ .Annotations.description }}{{ end }}
+          🏷️ Instance: {{ .Labels.instance }}
+          ⏰ {{ .StartsAt.Local.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+    discord_configs:
+      - webhook_url_file: /run/secrets/discord_webhook_url
+        title: '{{ if eq .Status "firing" }}🔥 ALERT{{ else }}✅ RESOLVED{{ end }}'
+        message: |
+          {{ range .Alerts }}
+          **{{ .Labels.alertname }}** ({{ .Labels.severity }})
+          {{ if .Annotations.summary }}> {{ .Annotations.summary }}{{ end }}
+          Instance: `{{ .Labels.instance }}`
+          {{ end }}
+        send_resolved: true
+
+  # 僅 Telegram（備用）
+  - name: 'telegram-only'
+    telegram_configs:
+      - bot_token_file: /run/secrets/telegram_bot_token
+        # TODO: 替換為你的 Telegram Chat ID
+        chat_id: 1783958062
+        parse_mode: HTML
+        message: |
+          {{ if eq .Status "firing" }}🔥{{ else }}✅{{ end }} <b>{{ .Status | toUpper }}</b>
+          {{ range .Alerts }}
+          <b>{{ .Labels.alertname }}</b> ({{ .Labels.severity }})
+          {{ if .Annotations.summary }}📝 {{ .Annotations.summary }}{{ end }}
+          {{ if .Annotations.description }}📋 {{ .Annotations.description }}{{ end }}
+          🏷️ Instance: {{ .Labels.instance }}
+          ⏰ {{ .StartsAt.Local.Format "2006-01-02 15:04:05" }}
+          {{ end }}
+        send_resolved: true
+
+  # 僅 Discord（備用）
+  - name: 'discord-only'
+    discord_configs:
+      - webhook_url_file: /run/secrets/discord_webhook_url
+        send_resolved: true
+
+# 抑制規則 - 避免告警風暴
+inhibit_rules:
+  # Critical 告警會抑制同一 alertname/instance 的 warning
+  - source_match:
+      severity: 'critical'
+    target_match:
+      severity: 'warning'
+    equal: ['alertname', 'instance']
+
+  # 主機掛掉時，抑制該主機的所有其他告警
+  - source_match:
+      alertname: 'InstanceDown'
+    target_match_re:
+      alertname: '.+'
+    equal: ['instance']
