@@ -115,7 +115,7 @@ groups:
           description: "{{ $labels.device }} transmitting {{ printf \"%.1f\" $value }} MB/s"
 
       - alert: NetworkInterfaceDown
-        expr: node_network_up{device!~"lo|docker.*|br-.*|veth.*"} == 0
+        expr: node_network_up{device="enp4s0"} == 0
         for: 2m
         labels:
           severity: critical
