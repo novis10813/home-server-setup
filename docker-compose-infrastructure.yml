@@ -51,5 +51,7 @@ include:
   - compose/infrastructure/prometheus.yml
   - compose/infrastructure/alertmanager.yml
   - compose/infrastructure/grafana.yml
+  - compose/infrastructure/loki.yml
+  - compose/infrastructure/promtail.yml
   - compose/infrastructure/node-exporter.yml
   - compose/infrastructure/cadvisor.yml

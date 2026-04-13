@@ -1,0 +1,28 @@
+# Grafana Promtail - Log shipper for Loki
+# Ref: https://grafana.com/docs/loki/latest/send-data/promtail/installation/
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+
+services:
+  promtail:
+    container_name: promtail
+    image: grafana/promtail:3.5.7
+    profiles:
+      - monitor
+      - all
+    security_opt:
+      - no-new-privileges:true
+    user: "0:0"  # root:root - 需要讀取 /var/lib/docker/containers 日誌（容器內 root，已有 no-new-privileges 保護）
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    depends_on:
+      loki:
+        condition: service_started
+    command:
+      - -config.file=/etc/promtail/promtail-config.yaml
+    volumes:
+      - ${DOCKERDIR}/appdata/promtail/promtail-config.yaml:/etc/promtail/promtail-config.yaml:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - ${DATADIR}/promtail:/promtail-data
+    environment:
+      - TZ=${TZ:-UTC}

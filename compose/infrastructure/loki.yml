@@ -1,0 +1,24 @@
+# Grafana Loki - Log aggregation
+# Ref: https://grafana.com/docs/loki/latest/setup/install/docker/
+# Profile: monitor (啟動指令: docker compose --profile monitor up -d)
+
+services:
+  loki:
+    container_name: loki
+    image: grafana/loki:3.5.7
+    profiles:
+      - monitor
+      - all
+    security_opt:
+      - no-new-privileges:true
+    user: "10001:10001"  # Loki 官方映像檔的預設用戶
+    restart: unless-stopped
+    networks:
+      - t3_proxy
+    command:
+      - -config.file=/etc/loki/loki-config.yaml
+    volumes:
+      - ${DOCKERDIR}/appdata/loki/loki-config.yaml:/etc/loki/loki-config.yaml:ro
+      - ${DATADIR}/loki:/loki
+    environment:
+      - TZ=${TZ:-UTC}

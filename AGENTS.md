@@ -7,14 +7,16 @@
 **Home Server Docker 服務** — 以 Docker Compose 管理的基礎設施配置庫，用於部署和管理 Home Server 網關服務。
 
 ### 主要技術棧
+
 - **容器化**：Docker、Docker Compose（使用 `include` 語法）
 - **反向代理**：Traefik v3（3.6.7）
 - **安全代理**：LinuxServer Socket Proxy（Docker API 安全存取）
 - **SSO 認證**：traefik-forward-auth（OAuth 2.0）
 - **憑證管理**：Let's Encrypt + Cloudflare DNS Challenge
-- **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
+- **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Grafana Loki 3.5.7 + Promtail 3.5.7 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
+
 1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure`、`app`、`media`、`homestack` 等）
 2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
 3. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
@@ -48,6 +50,8 @@
 │   │   ├── traefik_forward_auth.yml    # OAuth SSO 服務
 │   │   ├── prometheus.yml              # Prometheus 監控（profile: monitor）
 │   │   ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
+│   │   ├── loki.yml                    # Grafana Loki (profile: monitor)
+│   │   ├── promtail.yml                # Promtail (profile: monitor)
 │   │   ├── node-exporter.yml           # 主機指標（profile: monitor）
 │   │   └── cadvisor.yml                # 容器指標（profile: monitor）
 │   ├── apps/
@@ -61,6 +65,12 @@
 │   │       └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
 │   ├── prometheus/
 │   │   └── prometheus.yml             # Prometheus 抓取設定
+│   ├── loki/
+│   │   └── loki-config.yaml           # Loki config
+│   ├── promtail/
+│   │   └── promtail-config.yaml       # Promtail 抓取設定
+│   ├── grafana/
+│   │   └── provisioning/datasources/  # Grafana datasource files (e.g. Loki)
 │   └── nats/
 │       └── nats-server.conf           # NATS 主設定（機密見 secrets/nats_auth.conf）
 ├── secrets/                            # 敏感檔案（勿提交版控）
@@ -106,6 +116,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 | `socket_proxy` | `192.168.91.0/24` | Traefik 與 Socket Proxy 通訊 |
 
 ### 埠對應
+
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
 - `${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，建議僅內網或以防火牆限制）
@@ -113,23 +124,27 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 ## 程式碼風格指南
 
 ### YAML 檔案慣例
+
 - **檔名**：小寫 + 短橫線（kebab-case），如 `socket-proxy.yml`、`chain-basic-auth.yml`
 - **縮排**：2 空格，不使用 Tab
 - **註解**：使用 `#` 開頭，重要段落以 `###` 分隔
 - **環境變數**：使用 `${VAR}` 或 `${VAR:-default}` 語法
 
 ### Docker Compose 慣例
+
 - 所有服務必須設定 `container_name`
 - 必須啟用 `security_opt: - no-new-privileges:true`
 - 重啟策略：`restart: unless-stopped`
 - 敏感資料使用 Docker Secrets，不直接寫入環境變數
 
 ### Traefik 標籤慣例
+
 - Router 命名：`servicename-rtr`
 - Service 命名：`servicename-svc`
 - 格式：`traefik.http.routers.<name>.rule=Host(...)`
 
 ### 中介軟體鏈（Middleware Chains）
+
 - `chain-oauth@file`：OAuth 認證 + 安全標頭 + 限流
 - `chain-basic-auth@file`：Basic Auth + 安全標頭 + 限流
 - `chain-no-auth@file`：僅安全標頭（無認證）
@@ -137,12 +152,14 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 ## 安全注意事項
 
 ### 禁止提交的檔案
+
 - `.env`（使用 `.env.example` 作為範本）
 - `secrets/*`（除了 `README.md`）
 - `appdata/traefik/acme/acme.json`（包含私鑰）
 - 任何包含密碼、Token、私鑰的檔案
 
 ### 新增服務檢查清單
+
 1. [ ] 設定 `no-new-privileges:true`
 2. [ ] 使用 `restart: unless-stopped`
 3. [ ] 加入適當網路（通常是 `t3_proxy`）
@@ -154,12 +171,14 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 ## 維護任務
 
 ### 更新容器映像
+
 ```bash
 docker compose -f docker-compose-infrastructure.yml pull
 docker compose -f docker-compose-infrastructure.yml up -d
 ```
 
 ### 備份
+
 - 備份 `appdata/traefik/acme/acme.json`（Let's Encrypt 憑證）
 - 備份 `appdata/traefik/rules/`（動態規則）
 - 備份 `.env` 與 `secrets/`
@@ -167,11 +186,13 @@ docker compose -f docker-compose-infrastructure.yml up -d
 ## 疑難排解
 
 ### Traefik 無法啟動
+
 1. 檢查 `acme.json` 權限：`ls -la appdata/traefik/acme/acme.json`（應為 `600`）
 2. 驗證 Secrets 檔案存在：`ls secrets/`
 3. 檢查 Socket Proxy：`docker logs socket-proxy`
 
 ### 憑證問題
+
 1. 檢查 Cloudflare Token 權限（需 Zone:DNS:Edit）
 2. 查看 Traefik 日誌：`docker logs traefik | grep -i acme`
 3. 確認 DNS 解析正確
