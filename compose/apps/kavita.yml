@@ -15,7 +15,7 @@ services:
       - t3_proxy
     volumes:
       - ${DATADIR}/kavita/config:/kavita/config
-      - ${DATADIR}/kavita/books:/books
+      - ${DATADIR}/calibre/books:/books
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=${TZ}
