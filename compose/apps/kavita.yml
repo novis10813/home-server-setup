@@ -1,0 +1,34 @@
+# Kavita - Self-hosted digital library (manga, comics, EPUB, PDF)
+# https://wiki.kavitareader.com/installation/docker/github
+
+services:
+  ###########################################################################
+  # Kavita
+  ###########################################################################
+  kavita:
+    container_name: kavita
+    image: ghcr.io/kareadita/kavita:${KAVITA_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/kavita/config:/kavita/config
+      - ${DATADIR}/kavita/books:/books
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.kavita-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.kavita-rtr-http.rule=Host(`kavita.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.kavita-rtr-http.middlewares=chain-no-auth-relaxed@file"
+      ## HTTPS Router
+      - "traefik.http.routers.kavita-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.kavita-rtr.rule=Host(`kavita.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.kavita-rtr.middlewares=chain-no-auth-relaxed@file"
+      ## Service
+      - "traefik.http.routers.kavita-rtr.service=kavita-svc"
+      - "traefik.http.services.kavita-svc.loadbalancer.server.port=5000"

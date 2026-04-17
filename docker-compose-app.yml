@@ -19,4 +19,5 @@ include:
   - compose/apps/calibre-web.yml
   - compose/apps/home-assistant.yml
   - compose/apps/immich.yml
+  - compose/apps/kavita.yml
   - compose/apps/minecraft.yml
