@@ -1,0 +1,37 @@
+# Calibre-Web-Automated - eBook management with auto-import
+# https://github.com/crocodilestick/Calibre-Web-Automated
+
+services:
+  ###########################################################################
+  # Calibre-Web-Automated
+  ###########################################################################
+  calibre-web-automated:
+    container_name: calibre-web-automated
+    image: crocodilestick/calibre-web-automated:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/calibre/calibre-web-config:/config
+      - ${DATADIR}/calibre/books:/calibre-library
+      - ${DATADIR}/calibre/cwa-ingest:/cwa-book-ingest
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.cwa-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.cwa-rtr-http.rule=Host(`calibre.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.cwa-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.cwa-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.cwa-rtr.rule=Host(`calibre.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.cwa-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.cwa-rtr.service=cwa-svc"
+      - "traefik.http.services.cwa-svc.loadbalancer.server.port=8083"
