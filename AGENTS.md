@@ -167,6 +167,14 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 5. [ ] 使用 middleware chain 保護端點
 6. [ ] 敏感資料使用 Secrets 或環境變數
 7. [ ] 運行時資料掛載到 `${DATADIR}/service-name/`（不使用 `appdata/`）
+8. [ ] 設定資源限制（供 Prometheus/cAdvisor 監控）：
+   ```yaml
+   deploy:
+     resources:
+       limits:
+         memory: <適當值，如 512m / 1g / 2g>
+         cpus: "<適當值，如 0.5 / 1.0 / 2.0>"
+   ```
 
 ## 維護任務
 

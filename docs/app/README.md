@@ -11,8 +11,10 @@
 
 | 服務 | Host | 內網（Internal） | 外網（External） | 認證 |
 |------|------|------------------|------------------|------|
+| Calibre-Web-Automated | `calibre.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | CWA 內建登入 + `chain-no-auth@file` |
 | Home Assistant | `ha.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | HA 內建登入 + `chain-no-auth@file` |
 | Immich | `immich.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `chain-immich@file`（使用 Immich 內建認證，僅套用安全標頭/限流） |
+| Kavita | `kavita.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | Kavita 內建登入 + `chain-no-auth-relaxed@file` |
 
 ### TLS 使用方式
 
