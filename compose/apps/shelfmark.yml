@@ -1,0 +1,45 @@
+# Shelfmark - Book search and download frontend
+# https://github.com/calibrain/shelfmark
+
+services:
+  ###########################################################################
+  # Shelfmark
+  ###########################################################################
+  shelfmark:
+    container_name: shelfmark
+    image: ghcr.io/calibrain/shelfmark:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/shelfmark:/config
+      - ${DATADIR}/calibre/cwa-ingest:/books
+      - ${DATADIR}/calibre/calibre-web-config/app.db:/cwa-config/app.db:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - TZ=${TZ}
+      - CALIBRE_WEB_URL=http://calibre-web-automated:8083
+      - CALIBRE_WEB_DB_PATH=/cwa-config/app.db
+      - PROWLARR_URL=http://prowlarr:9696
+    deploy:
+      resources:
+        limits:
+          memory: 2g
+          cpus: "1.0"
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.shelfmark-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.shelfmark-rtr-http.rule=Host(`shelfmark.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.shelfmark-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.shelfmark-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.shelfmark-rtr.rule=Host(`shelfmark.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.shelfmark-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.shelfmark-rtr.service=shelfmark-svc"
+      - "traefik.http.services.shelfmark-svc.loadbalancer.server.port=8084"

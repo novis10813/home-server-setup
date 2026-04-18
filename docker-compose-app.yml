@@ -17,6 +17,7 @@ secrets:
 ########################### INCLUDES
 include:
   - compose/apps/calibre-web-automated.yml
+  - compose/apps/shelfmark.yml
   - compose/apps/home-assistant.yml
   - compose/apps/immich.yml
   - compose/apps/kavita.yml
