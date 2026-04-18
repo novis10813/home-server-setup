@@ -18,3 +18,4 @@ networks:
 ########################### INCLUDES
 include:
   - compose/homestack/nats.yml
+  - compose/homestack/crypto-relay.yml

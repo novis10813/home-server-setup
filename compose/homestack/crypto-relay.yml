@@ -1,0 +1,35 @@
+# Crypto-Relay — NATS-based cryptocurrency market data relay
+# Source: /mnt/raid1/novis/home-stack/crypto-relay
+
+services:
+  crypto-relay:
+    container_name: crypto-relay
+    build:
+      context: /mnt/raid1/novis/home-stack/crypto-relay
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+      - homestack
+    volumes:
+      - ${DOCKERDIR}/appdata/crypto-relay/config.yaml:/app/config.yaml:ro
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ:-UTC}
+      - CRYPTO_RELAY_NATS__URL=nats://nats:4222
+      - CRYPTO_RELAY_NATS__USER=homestack
+      - CRYPTO_RELAY_NATS__PASSWORD=${NATS_PASSWORD}
+    depends_on:
+      - nats
+    healthcheck:
+      test: ["CMD", "/app/crypto-relay", "healthcheck"]
+      interval: 30s
+      timeout: 5s
+      start_period: 15s
+      retries: 3
+
+networks:
+  t3_proxy:
+    external: true

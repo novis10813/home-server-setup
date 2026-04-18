@@ -1,0 +1,15 @@
+# Crypto-Relay Configuration
+# 實際運行設定，不提交版控；範本見 crypto-relay/config.yaml.example
+
+nats:
+  url: "nats://nats:4222"
+
+heartbeat:
+  timeout_seconds: 60
+  cleanup_interval_seconds: 30
+
+monitoring:
+  port: 9090
+
+logging:
+  level: "info"
