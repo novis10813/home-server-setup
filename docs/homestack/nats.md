@@ -16,17 +16,12 @@
 | 路徑 | 用途 |
 |------|------|
 | `compose/homestack/nats.yml` | 服務定義（映像、volume、Traefik labels、`t3_proxy`） |
-| `appdata/nats/nats-server.conf` | 主設定（port、JetStream、`server_name`、含 `include`）— **版控** |
-| `secrets/nats_auth.conf` | `authorization { users: [...] }` 片段 — **勿提交**，見 `secrets/README.md` |
+| `appdata/nats/nats-server.conf` | 主設定（port、JetStream、`server_name`）— **版控** |
 | `${DATADIR}/nats` | JetStream 等執行時資料（掛載為容器內 `/data`）— **備份對象** |
-
-主設定檔在容器內須掛載為 **`/nats-server.conf`**，以便 `include "/run/secrets/nats_auth"` 能正確解析絕對路徑。
 
 ## 認證
 
-使用 **帳號／密碼**（設定於 `secrets/nats_auth.conf`）。客戶端連線時需帶入與該檔一致的憑證。若日誌出現 plaintext 密碼警告，可改為 [bcrypt](https://docs.nats.io/running-a-nats-service/configuration/securing_nats/username_password#bcrypted-passwords) 等較強方式。
-
-官方說明：[Authentication](https://docs.nats.io/running-a-nats-service/configuration/securing_nats/auth_intro)。
+**無認證**。NATS port 4222 未對外 publish，僅限 `t3_proxy` Docker 網路內的容器直接連線，以網路隔離作為安全邊界。客戶端連線 URL：`nats://nats:4222`。
 
 ## JetStream 與單機模式
 
@@ -46,12 +41,12 @@ docker compose -f docker-compose-homestack.yml up -d nats
 docker compose -f docker-compose-homestack.yml exec nats nats-server -t -c /nats-server.conf
 ```
 
-調整 `appdata/nats/nats-server.conf` 或 `secrets/nats_auth.conf` 後，請 **`up -d` 或 `--force-recreate nats`** 使設定生效。
+調整 `appdata/nats/nats-server.conf` 後，請 **`up -d` 或 `--force-recreate nats`** 使設定生效。
 
 ## 本機開發連線
 
 1. **在容器內跑測試**（與 NATS 同一網路）：  
-   `docker run --rm -it --network t3_proxy ...`，連線位址 `nats://帳號:密碼@nats:4222`（依客戶端 API 傳遞）。
+   `docker run --rm -it --network t3_proxy ...`，連線位址 `nats://nats:4222`。
 2. **在主機跑 Python / 其它程式**：對 Compose 的 `nats` 服務加上 `ports: - "127.0.0.1:4222:4222"`，或自行評估是否使用。
 
 ## 參考

@@ -19,8 +19,6 @@ services:
     environment:
       - TZ=${TZ:-UTC}
       - CRYPTO_RELAY_NATS__URL=nats://nats:4222
-      - CRYPTO_RELAY_NATS__USER=homestack
-      - CRYPTO_RELAY_NATS__PASSWORD=${NATS_PASSWORD}
     depends_on:
       - nats
     healthcheck:

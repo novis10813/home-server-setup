@@ -72,7 +72,7 @@
 │   ├── grafana/
 │   │   └── provisioning/datasources/  # Grafana datasource files (e.g. Loki)
 │   └── nats/
-│       └── nats-server.conf           # NATS 主設定（機密見 secrets/nats_auth.conf）
+│       └── nats-server.conf           # NATS 主設定（無認證，依賴 Docker 網路隔離）
 ├── secrets/                            # 敏感檔案（勿提交版控）
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌

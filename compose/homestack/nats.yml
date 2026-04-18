@@ -17,8 +17,6 @@ services:
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=${TZ:-UTC}
-    secrets:
-      - nats_auth
     command:
       - nats-server
       - -c

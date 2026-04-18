@@ -7,7 +7,7 @@
 | 項目 | 說明 |
 |------|------|
 | **檔案** | `docker-compose-homestack.yml` |
-| **Secrets** | `nats_auth` → `${DOCKERDIR}/secrets/nats_auth.conf`（見 `secrets/README.md`） |
+| **Secrets** | 無（NATS 不使用認證，依賴 Docker 網路隔離） |
 | **網路** | `t3_proxy`（external，與 Traefik 與其它已代理服務互通）、`homestack`（內部 bridge，供日後只給自訂服務使用） |
 
 ## 服務一覽
@@ -21,7 +21,7 @@
 ```bash
 cd ${DOCKERDIR}
 
-# 首次請確認 secrets/nats_auth.conf、appdata/nats/nats-server.conf 已就緒
+# 首次請確認 appdata/nats/nats-server.conf 已就緒
 docker compose -f docker-compose-homestack.yml up -d
 
 docker compose -f docker-compose-homestack.yml logs -f nats

@@ -1,11 +1,6 @@
 # Home stack: 自訂義應用服務
 # Usage: docker compose -f docker-compose-homestack.yml up -d
 
-########################### SECRETS
-secrets:
-  nats_auth:
-    file: ${DOCKERDIR}/secrets/nats_auth.conf
-
 ########################### NETWORKS
 networks:
   t3_proxy:
