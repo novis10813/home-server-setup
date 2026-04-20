@@ -22,3 +22,4 @@ include:
   - compose/apps/immich.yml
   - compose/apps/kavita.yml
   - compose/apps/minecraft.yml
+  - compose/apps/portainer.yml

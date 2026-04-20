@@ -1,0 +1,32 @@
+# Portainer - Docker container management
+# https://docs.portainer.io/start/install/server/docker/linux
+
+services:
+  ###########################################################################
+  # Portainer
+  ###########################################################################
+  portainer:
+    container_name: portainer
+    image: portainer/portainer-ce:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${DATADIR}/portainer:/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    networks:
+      t3_proxy: {}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.portainer-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.portainer-rtr.rule=Host(`portainer.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.portainer-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.portainer-rtr.service=portainer-svc"
+      - "traefik.http.services.portainer-svc.loadbalancer.server.port=9000"
+
+networks:
+  t3_proxy:
+    external: true
