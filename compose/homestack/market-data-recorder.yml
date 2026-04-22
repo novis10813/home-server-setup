@@ -1,0 +1,54 @@
+# market-data-recorder — NATS trade recorder + MinIO exporter
+# Source: /mnt/raid1/novis/home-stack/market-data-recorder
+
+services:
+  market-data-recorder:
+    container_name: market-data-recorder
+    build:
+      context: /mnt/raid1/novis/home-stack/market-data-recorder
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy      # NATS (nats:4222)
+      - homestack     # QuestDB (questdb:9000)
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - ${DOCKERDIR}/secrets/market-data-recorder.env
+    environment:
+      - TZ=${TZ:-UTC}
+      - RECORDER_NATS_URL=nats://nats:4222
+      - RECORDER_QUESTDB_HOST=questdb
+    depends_on:
+      - nats
+      - questdb
+
+  market-data-export:
+    container_name: market-data-export
+    build:
+      context: /mnt/raid1/novis/home-stack/market-data-recorder
+      dockerfile: Dockerfile.export
+    restart: "no"    # cron 觸發，不自動重啟
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack     # QuestDB (questdb:9000)；MinIO 走外網 HTTP
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - ${DOCKERDIR}/secrets/market-data-recorder.env
+    environment:
+      - TZ=${TZ:-UTC}
+      - EXPORT_QUESTDB_HOST=questdb
+    depends_on:
+      - questdb
+    profiles:
+      - export        # 只在 cron 觸發時用，平時不啟動
+
+networks:
+  t3_proxy:
+    external: true
+  homestack:
+    external: true
