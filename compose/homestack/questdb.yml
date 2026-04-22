@@ -1,0 +1,28 @@
+# QuestDB — Time-series database for market data
+# HTTP REST + ILP: port 9000 | TCP ILP: port 9009
+
+services:
+  questdb:
+    container_name: questdb
+    image: questdb/questdb:${QUESTDB_VERSION:-8.2.1}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack
+    volumes:
+      - ${DOCKERDIR}/appdata/questdb/server.ini:/var/lib/questdb/conf/server.ini:ro
+      - ${DATADIR}/questdb:/var/lib/questdb/db
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ:-UTC}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+
+networks:
+  homestack:
+    external: true

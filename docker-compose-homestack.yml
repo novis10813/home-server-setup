@@ -15,3 +15,5 @@ include:
   - compose/homestack/nats.yml
   - compose/homestack/crypto-relay.yml
   - compose/homestack/financial-dashboard.yml
+  - compose/homestack/questdb.yml
+  - compose/homestack/market-data-recorder.yml
