@@ -38,9 +38,10 @@ groups:
           description: "Service {{ $labels.service }} has {{ printf \"%.1f\" $value }}% 4xx errors."
 
       ### 延遲告警
+      # 排除 Home Assistant (ha-svc)：SSE / 長輪詢 / 重儀表板使 p95 常 >2s，與代理本身品質關聯低。
       - alert: TraefikHighLatency
         expr: |
-          histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket[5m])) by (le, service)) > 2
+          histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service!="ha-svc@docker"}[5m])) by (le, service)) > 2
         for: 5m
         labels:
           severity: warning
