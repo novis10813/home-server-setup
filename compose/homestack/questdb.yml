@@ -28,7 +28,8 @@ services:
       resources:
         limits:
           memory: 2g
-          cpus: "2.0"
+          # 提高 CPU 上限以降低 CFS 節流（cAdvisor throttled periods）
+          cpus: "${QUESTDB_CPU_LIMIT:-4.0}"
     healthcheck:
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/9000 && printf 'GET / HTTP/1.0\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q HTTP"]
       interval: 30s
