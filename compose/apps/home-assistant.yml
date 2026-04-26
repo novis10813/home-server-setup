@@ -8,7 +8,7 @@ services:
   ###########################################################################
   home-assistant:
     container_name: home-assistant
-    image: ghcr.io/home-assistant/home-assistant:${HOMEASSISTANT_VERSION:-stable}
+    image: ghcr.io/home-assistant/home-assistant:${HOMEASSISTANT_VERSION:-2026.4.4}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
