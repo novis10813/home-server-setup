@@ -1,98 +1,202 @@
 # Minecraft Java Edition 伺服器
 
-Minecraft 以單一容器部署，**不經 Traefik**，玩家直連主機埠 25565（TCP）。
+採 **Velocity Proxy + Fabric Backend** 雙容器架構：
 
-## 存取
+- 玩家連線（TCP 25565）由 Velocity 代理做正版驗證後，再以 Velocity Modern Forwarding 轉送至後端 Fabric 伺服器。
+- Fabric 後端為 `online-mode=false`，透過 [FabricProxy-Lite](https://modrinth.com/mod/fabricproxy-lite) 驗證來自 Velocity 的 forwarding secret，未攜帶正確 secret 的直連會被拒絕。
+- Simple Voice Chat（UDP 24454）不經 Velocity，直接由 Traefik 轉到後端容器。
 
-- **連線**：`<主機 IP 或網域>:25565`
-- **認證**：無；依需求可於遊戲內或透過插件/模組設定白名單/權限
+## 架構
 
-## 版本與伺服器類型
+```
+玩家 (正版) ─TCP 25565─▶ Traefik ─▶ minecraft-velocity (online-mode=true, modern fwd)
+                                       │
+                                       ▼ (network: minecraft_internal, internal=true)
+                                     minecraft (online-mode=false, FabricProxy-Lite)
+                                       ▲
+語音 ─UDP 24454─▶ Traefik ──────────────┘ (Simple Voice Chat 直接到後端)
+```
 
-### 環境變數（.env）
+| 容器 | 角色 | 對外埠 | 加入網路 |
+|------|------|--------|----------|
+| `minecraft-velocity` | 玩家入口、正版驗證 | TCP 25565（經 Traefik） | `t3_proxy`、`minecraft_internal` |
+| `minecraft` | Fabric 後端、語音 | UDP 24454（經 Traefik） | `t3_proxy`（語音）、`minecraft_internal`（與 Velocity 通訊） |
+
+`minecraft_internal` 設為 `internal: true`，後端 TCP 25565 不會經由 Docker bridge 對外暴露。
+
+## 環境變數（.env）
+
+### 後端 Fabric
 
 | 變數 | 說明 | 預設 |
 |------|------|------|
-| `MINECRAFT_VERSION` | Minecraft 版本 | `1.21.11` |
-| `MINECRAFT_TYPE` | 伺服器類型（見下表） | `FABRIC` |
-| `MINECRAFT_PORT` | 主機對外埠 | `25565` |
+| `MINECRAFT_VERSION` | Minecraft 版本（同時用於 Velocity Modrinth plugin 篩選） | `1.21.11` |
+| `MINECRAFT_TYPE` | 伺服器類型 | `FABRIC` |
 | `MINECRAFT_MEMORY` | JVM 記憶體 | `2G` |
-| `MINECRAFT_MODRINTH_MODS` | Modrinth 模組清單（逗號分隔；僅 TYPE=FABRIC 時使用） | 見下方「Fabric 效能模組」 |
+| `MINECRAFT_MODRINTH_MODS` | Fabric 模組清單（逗號分隔；**務必包含 `fabricproxy-lite`**） | 見 compose 預設 |
+| `MINECRAFT_IMAGE_TAG` | itzg/minecraft-server 映像標籤 | `latest` |
 
-### TYPE 選擇
+> 後端的 `online-mode` / `enforce-secure-profile` 由 compose 強制設為 `FALSE`，每次啟動會覆寫 `server.properties`，請勿手動改回 `true`。
 
-| TYPE | 說明 | 玩家端 | 適用情境 |
-|------|------|--------|----------|
-| **FABRIC** | 模組載入器 | 原版即可（僅伺服器端模組時） | **目前預設**：原味生存 + 伺服器端效能模組 |
-| **VANILLA** | 原版 | 原版 | 僅要原版、不裝模組 |
-| **PAPER** | Bukkit 系、效能佳、插件多 | 原版即可 | 要插件、不想強制玩家裝模組 |
-| **PURPUR** | Paper 分支、更多可調選項 | 原版即可 | 進階調校 |
+### Velocity Proxy
 
-- **Fabric**：模組由 `MODRINTH_PROJECTS` 在啟動時自動從 Modrinth 下載；本專案預設安裝僅伺服器端效能模組，**玩家用原版客戶端即可連線**。
-- **Paper / Purpur**：世界與 Vanilla 相容；可到 [SpigotMC](https://www.spigotmc.org/resources/) 或 [Modrinth](https://modrinth.com/plugins) 找插件。
+| 變數 | 說明 | 預設 |
+|------|------|------|
+| `VELOCITY_VERSION` | Velocity 版本（itzg/mc-proxy 拉取） | `latest` |
+| `VELOCITY_MEMORY` | JVM 記憶體 | `512M` |
+| `VELOCITY_MEMORY_LIMIT` | compose `deploy.resources.limits.memory` | `768m` |
+| `VELOCITY_CPU_LIMIT` | compose `deploy.resources.limits.cpus` | `1.0` |
+| `VELOCITY_IMAGE_TAG` | itzg/mc-proxy 映像標籤 | `latest` |
+| `VELOCITY_MODRINTH_PLUGINS` | Velocity 端 Modrinth plugin 清單 | `minimotd` |
 
-### Fabric 效能模組（原味生存用）
+## Forwarding secret（必要前置）
 
-當 `MINECRAFT_TYPE=FABRIC` 時，預設透過 `MINECRAFT_MODRINTH_MODS` 安裝下列**僅伺服器端**效能模組（皆為 Modrinth 專案代號，可於 .env 覆寫）：
+Velocity 與 FabricProxy-Lite 共用同一個 secret，**未產生此檔的情況下伺服器無法啟動**：
 
-| 模組 | Modrinth 代號 | 說明 |
-|------|----------------|------|
-| **Fabric API** | `fabric-api` | 多數 Fabric 模組依賴，必裝。 |
-| **Lithium** | `lithium` | 遊戲邏輯優化（生物 AI、方塊 tick、碰撞等），顯著降低 tick 時間。 |
-| **FerriteCore** | `ferrite-core` | 降低記憶體使用與 GC 停頓。 |
-| **Krypton** | `krypton` | 網路層優化，多人時減輕 CPU 負擔。 |
-| **C2ME** | `c2me-fabric` | 區塊載入/生成多執行緒化，加快地形生成。 |
-| **ModernFix** | `modernfix` | 綜合效能與記憶體優化、修復部分 bug。 |
-| **LazyDFU** | `lazydfu` | 延遲 DataFixerUpper 初始化，加快啟動。 |
-| **Alternate Current** | `alternate-current` | 紅石粉邏輯優化，紅石機械多時可減少卡頓。 |
+```bash
+openssl rand -hex 24 | tr -d '\n' > /opt/docker/secrets/velocity_forwarding_secret
+chmod 600 /opt/docker/secrets/velocity_forwarding_secret
+```
 
-若要增減模組，在 `.env` 設定 `MINECRAFT_MODRINTH_MODS` 為逗號分隔的清單（需包含 `fabric-api` 與上述欲保留的模組）。
+> **注意**：必須用 `tr -d '\n'` 去掉 trailing newline，否則 FabricProxy-Lite.toml 內的字串會與 Velocity 讀到的檔案內容不一致，導致 `Mismatched secret` 拒連。
 
-## 資料與備份
+`secrets/velocity_forwarding_secret` 已被 `.gitignore` 涵蓋，不會被提交。
 
-- **世界與設定**：`${DATADIR}/minecraft`（對應容器內 `/data`）
-- **備份建議**：升級版本或大改設定前，先停止容器再壓縮備份該目錄，例如：
+第一次啟動完成後，需把同一個 secret 寫入後端 FabricProxy-Lite 的設定（mod 第一次啟動會產生空模板）：
 
-  ```bash
-  docker compose -f docker-compose-app.yml stop minecraft
-  tar -czvf minecraft-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C "${DATADIR}" minecraft
-  docker compose -f docker-compose-app.yml up -d minecraft
-  ```
+```bash
+SECRET=$(tr -d '\n' < /opt/docker/secrets/velocity_forwarding_secret)
+sed -i "s|^secret = \"\"|secret = \"$SECRET\"|" /mnt/raid1/minecraft/config/FabricProxy-Lite.toml
+```
 
-Fabric 無內建備份，可依排程用主機端腳本對 `${DATADIR}/minecraft` 做壓縮備份，或之後改回 Paper 使用備份插件。
+或一次性手動建立：
 
-## appdata/minecraft（版控）
+```bash
+SECRET=$(tr -d '\n' < /opt/docker/secrets/velocity_forwarding_secret)
+cat > /mnt/raid1/minecraft/config/FabricProxy-Lite.toml <<EOF
+hackOnlineMode = false
+hackEarlySend = true
+hackMessageChain = false
+disconnectMessage = "This server requires you to connect with Velocity."
+secret = "$SECRET"
+EOF
+```
 
-- 目前使用 **Fabric**，不依賴 `appdata/minecraft` 內的 Paper patch 或 plugin 設定。
-- Paper 專用設定（如活塞複製 patch）已移除；若之後改回 Paper，可參考 `appdata/minecraft/README.md` 恢復 patch 或插件設定。
+> **`hackEarlySend = true` 是必要的**。預設 `false` 會讓 LuckPerms-Fabric 在 pre-login 階段拿到離線 hash UUID，使新玩家被踢：
+> `Permissions data for your user was not loaded during the pre-login stage`。
+> 開啟後 FabricProxy-Lite 會在更早的階段注入 Velocity 轉發來的真實 Mojang UUID，LuckPerms 才能正確預載資料。
+
+## 設定檔位置
+
+| 設定檔 | 路徑 | 是否版控 |
+|--------|------|----------|
+| Velocity 主設定 | `appdata/velocity/velocity.toml` | ✅（hand-written） |
+| Velocity forwarding secret | `secrets/velocity_forwarding_secret` | ❌（git-ignored） |
+| FabricProxy-Lite 設定 | `${DATADIR}/minecraft/config/FabricProxy-Lite.toml` | ❌（含 secret，禁止版控） |
+| MiniMOTD 設定 | `${DATADIR}/velocity/plugins/minimotd-velocity/main.conf` + `icons/` | ❌（runtime data） |
+| 後端世界與 server.properties | `${DATADIR}/minecraft/` | ❌ |
+
+## MOTD / 圖示
+
+由 [MiniMOTD-Velocity](https://modrinth.com/plugin/minimotd) 在 Proxy 端處理（不是後端）：
+
+- 設定：`${DATADIR}/velocity/plugins/minimotd-velocity/main.conf`
+- icon：`${DATADIR}/velocity/plugins/minimotd-velocity/icons/<name>.png`，於 `main.conf` 以 `icon=<name>` 引用
+
+把 MiniMOTD 放在 Proxy 端的好處：玩家在伺服器列表 ping 時不會打到後端，可以保留 itzg `pause-when-empty-seconds` 的省資源效果。
+
+`velocity.toml` 內的 `motd` 欄位會被 MiniMOTD 取代，僅作為插件未載入時的 fallback。注意 Velocity 3 的 MOTD 使用 [MiniMessage](https://docs.papermc.io/adventure/) 格式（`<bold><green>...</green></bold>`），不再支援 `§` legacy 顏色碼。
+
+## 第一次部署
+
+```bash
+# 1. 建立 forwarding secret（見上節）
+openssl rand -hex 24 | tr -d '\n' > /opt/docker/secrets/velocity_forwarding_secret
+chmod 600 /opt/docker/secrets/velocity_forwarding_secret
+
+# 2. 建立 Velocity runtime 目錄
+mkdir -p /mnt/raid1/velocity
+
+# 3. 第一次只起後端，等 fabricproxy-lite 模組下載完
+docker compose -f docker-compose-app.yml up -d minecraft
+docker compose -f docker-compose-app.yml logs -f minecraft   # 等 "Done"
+docker compose -f docker-compose-app.yml stop minecraft
+
+# 4. 把 secret 寫入 FabricProxy-Lite.toml（見上節）
+
+# 5. 啟動完整 stack
+docker compose -f docker-compose-app.yml up -d minecraft minecraft-velocity
+```
 
 ## 常用指令
 
 ```bash
-# 啟動
-docker compose -f docker-compose-app.yml up -d minecraft
+# 啟動 / 停止
+docker compose -f docker-compose-app.yml up -d minecraft minecraft-velocity
+docker compose -f docker-compose-app.yml stop minecraft minecraft-velocity
 
-# 停止
-docker compose -f docker-compose-app.yml stop minecraft
-
-# 查看日誌（含遊戲輸出）
+# 看後端 log（含遊戲輸出）
 docker compose -f docker-compose-app.yml logs -f minecraft
 
-# 進入容器內執行指令（例如 OP）
+# 看 Velocity log
+docker compose -f docker-compose-app.yml logs -f minecraft-velocity
+
+# 後端 RCON 控制台
 docker exec -it minecraft rcon-cli
-# 或直接
-docker exec -it minecraft mc-send-to-console "op <玩家ID>"
+# 或單行指令
+docker exec minecraft mc-send-to-console "op <玩家ID>"
+
+# Velocity 控制台
+docker attach minecraft-velocity   # Ctrl+P, Ctrl+Q 離開但不關閉
 ```
 
-## 若改用 Paper
+## 備份
 
-- 在 `.env` 設 `MINECRAFT_TYPE=PAPER`，並移除或留空 `MINECRAFT_MODRINTH_MODS`（Paper 使用插件而非 Fabric 模組）。
-- **活塞複製（TNT／地毯／鐵軌）**：Paper 預設關閉。若要開啟，可在 `${DATADIR}/minecraft/config/paper-global.yml` 的 `unsupported-settings:` 設 `allow-piston-duplication: true`，或於 `appdata/minecraft/patches/` 新增對應 patch 並掛載給容器（見 [Paper 說明](https://docs.papermc.io/paper/reference/global-configuration#unsupported-settings)）。
-- **備份**：可透過 Modrinth 安裝插件（如 `backup-on-event`、`simple-backup`），並在 compose 或環境變數中設定對應的 Modrinth 專案與掛載。
+世界與後端設定：
+
+```bash
+docker compose -f docker-compose-app.yml stop minecraft
+tar -czvf minecraft-backup-$(date +%Y%m%d-%H%M%S).tar.gz -C "${DATADIR}" minecraft
+docker compose -f docker-compose-app.yml up -d minecraft
+```
+
+Velocity 端通常不需要備份（plugin 設定可在 git 與 `appdata/velocity/` 內維護），但若 MiniMOTD config 有變動可一併備：
+
+```bash
+tar -czvf velocity-plugins-$(date +%Y%m%d-%H%M%S).tar.gz \
+  -C "${DATADIR}/velocity" plugins
+```
+
+## Mineflayer / Bot 接入
+
+後端為 offline-mode、且 FabricProxy-Lite 強制 forwarding secret 驗證，bot 不能直接連 `minecraft:25565` 而省略 secret。建議方式：
+
+1. **把 bot 容器加入 `minecraft_internal` 網路**（`networks: [minecraft_internal]`），透過容器名 `minecraft` 連線。
+2. Bot 端必須帶 forwarding payload —— 即實作 Velocity Modern Forwarding 的 LoginPluginRequest/Response。Mineflayer 目前沒有原生支援，需自行用插件處理或改用 `mineflayer-velocity` 之類的 wrapper。
+3. 簡單路線：暫時把 FabricProxy-Lite 的 `secret` 留空（停用驗證）並改用 IP 白名單模組（[IP Whitelist Fabric](https://modrinth.com/mod/ip-whitelist) 之類）只允許 `minecraft_internal` 網段的 IP，bot 可直接以 `auth='offline'` 連入。**不建議在公開伺服器使用**，僅適合私服。
+
+## 疑難排解
+
+| 症狀 | 可能原因 | 處理 |
+|------|----------|------|
+| 玩家被踢 `Permissions data for your user was not loaded during the pre-login stage` | FabricProxy-Lite `hackEarlySend=false` | 改 `true` 並重啟後端 |
+| 玩家被踢 `This server requires you to connect with Velocity.` | secret 不一致 / 直連到後端 | 確認 `velocity_forwarding_secret` 與 `FabricProxy-Lite.toml` 的 `secret` 內容一致；檢查 secret 檔末尾沒有 `\n` |
+| Velocity 啟動失敗 `Can't parse your MOTD ... Legacy formatting codes` | `velocity.toml` 內仍是 `§` 顏色碼 | 改成 MiniMessage 格式 |
+| Velocity 啟動失敗 `chown: changing ownership of '/server/forwarding.secret': Read-only file system` | 用 docker secret 而非 bind mount | 維持 compose 內 bind mount 寫法 |
+| MOTD 顯示成 `server.properties` 那行而不是 MiniMOTD 隨機文案 | MiniMOTD 還沒搬到 Proxy / Velocity 沒套 plugin | 確認 `${DATADIR}/velocity/plugins/minimotd-velocity/` 存在、`MODRINTH_PROJECTS` 含 `minimotd` |
+| LP 警告 `UUID is NOT Mojang-assigned (type 3)` | 後端把 forwarding 失效，玩家被當離線 | 確認 backend log 有 `fabricproxy-lite` 載入；FabricProxy-Lite secret 正確 |
+
+## 升級 / 換版本
+
+- **Minecraft 版本**：在 `.env` 改 `MINECRAFT_VERSION`，重啟 `minecraft` 容器（mod 會自動依新版本下載）。Velocity 端的 `MINECRAFT_VERSION` 也會跟著變，僅用於 Modrinth plugin 篩選。
+- **單獨升 Velocity**：在 `.env` 設 `VELOCITY_VERSION` 為特定版本（如 `3.4.0`），重啟 `minecraft-velocity`。
+- **單獨升 plugin**：直接放 jar 到 `${DATADIR}/velocity/plugins/` 並刪舊版，重啟 `minecraft-velocity`。
 
 ## 參考
 
 - [itzg/docker-minecraft-server](https://github.com/itzg/docker-minecraft-server)
-- [Fabric](https://fabricmc.net/)
-- [Modrinth（模組/插件）](https://modrinth.com/)
-- [Paper 官網](https://papermc.io/)
+- [itzg/docker-mc-proxy](https://github.com/itzg/docker-mc-proxy)
+- [Velocity 設定說明](https://docs.papermc.io/velocity/configuration)
+- [FabricProxy-Lite](https://modrinth.com/mod/fabricproxy-lite)
+- [MiniMOTD](https://modrinth.com/plugin/minimotd)
+- [Simple Voice Chat](https://modrinth.com/plugin/simple-voice-chat)

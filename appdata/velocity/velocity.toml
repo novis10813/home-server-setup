@@ -1,0 +1,55 @@
+# Velocity 3 主設定 - 玩家正版驗證入口（hand-written, version-controlled）
+# 文件：https://docs.papermc.io/velocity/configuration
+
+config-version = "2.7"
+
+# Velocity 監聽位址（容器內），由 Traefik TCP 入口 minecraft:25565 對外
+bind = "0.0.0.0:25577"
+
+motd = "<bold><green>社畜服</green></bold><newline><gray>死做活做像條狗 被打不能汪汪叫</gray>"
+show-max-players = 50
+
+# 在 Proxy 層做正版驗證；後端永遠是 offline-mode
+online-mode = true
+force-key-authentication = true
+prevent-client-proxy-connections = false
+
+# Modern forwarding：與 FabricProxy-Lite 共用 secret
+player-info-forwarding-mode = "modern"
+forwarding-secret-file = "forwarding.secret"
+
+announce-forge = false
+announce-proxy-commands = true
+kick-existing-players = false
+ping-passthrough = "DISABLED"
+sample-players-in-ping = false
+enable-player-address-logging = true
+
+# 後端伺服器列表 — 容器名 minecraft，於 minecraft_internal 網路解析
+[servers]
+lobby = "minecraft:25565"
+try = ["lobby"]
+
+[forced-hosts]
+
+[advanced]
+compression-threshold = 256
+compression-level = -1
+login-ratelimit = 3000
+connection-timeout = 5000
+read-timeout = 30000
+haproxy-protocol = false
+tcp-fast-open = false
+proxy-protocol = false
+bungee-plugin-message-channel = true
+show-ping-requests = false
+failover-on-unexpected-server-disconnect = true
+log-command-executions = false
+log-player-connections = true
+accepts-transfers = false
+
+[query]
+enabled = false
+port = 25577
+map = "Velocity"
+show-plugins = false

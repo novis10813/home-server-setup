@@ -1,10 +1,62 @@
-# Minecraft Java Edition - Fabric server（原味生存 + 伺服器端效能模組）
-# Image: https://github.com/itzg/docker-minecraft-server
-# 遊戲連線埠：25565（TCP），不需經 Traefik
+# Minecraft Java Edition - Velocity proxy + Fabric backend
+# Images:
+#   - Proxy:   https://github.com/itzg/docker-mc-proxy
+#   - Backend: https://github.com/itzg/docker-minecraft-server
+# 架構：
+#   玩家 (TCP 25565) -> Traefik -> Velocity (online-mode=true, modern forwarding)
+#                                     -> Fabric backend (online-mode=false, FabricProxy-Lite)
+#   語音  (UDP 24454) -> Traefik -> Fabric backend (Simple Voice Chat 直送，不經 Velocity)
+# 後端 TCP 不對外暴露：Velocity 透過內部網路 minecraft_internal 連入。
 
 services:
   ###########################################################################
-  # Minecraft Server
+  # Velocity Proxy - 玩家正版驗證入口
+  ###########################################################################
+  minecraft-velocity:
+    container_name: minecraft-velocity
+    image: itzg/mc-proxy:${VELOCITY_IMAGE_TAG:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    tty: true
+    stdin_open: true
+    depends_on:
+      - minecraft
+    networks:
+      - t3_proxy
+      - minecraft_internal
+    volumes:
+      - ${DATADIR}/velocity:/server
+      - ${DOCKERDIR}/appdata/velocity/velocity.toml:/server/velocity.toml
+      # forwarding.secret 以 bind mount 提供：itzg/mc-proxy 的 init 會 chown，
+      # 因此不能用 docker secret（RO tmpfs）。檔案需 chmod 600 + 包含 root 可讀。
+      - ${DOCKERDIR}/secrets/velocity_forwarding_secret:/server/forwarding.secret
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+      - TYPE=VELOCITY
+      - VELOCITY_VERSION=${VELOCITY_VERSION:-latest}
+      - MEMORY=${VELOCITY_MEMORY:-512M}
+      # MOTD/icon 由 MiniMOTD-Velocity 接管；server-list ping 不再透傳到後端，
+      # pause-when-empty 維持有效。
+      # MODRINTH_PROJECTS 需要 MINECRAFT_VERSION 用於相容性篩選（Velocity plugin 通常版本中立）
+      - MINECRAFT_VERSION=${MINECRAFT_VERSION:-1.21.11}
+      - MODRINTH_PROJECTS=${VELOCITY_MODRINTH_PLUGINS:-minimotd}
+    deploy:
+      resources:
+        limits:
+          memory: ${VELOCITY_MEMORY_LIMIT:-768m}
+          cpus: "${VELOCITY_CPU_LIMIT:-1.0}"
+    labels:
+      - "traefik.enable=true"
+      # TCP Router for Minecraft (HostSNI(`*`) - 玩家連線統一進 Velocity)
+      - "traefik.tcp.routers.minecraft-rtr.entrypoints=minecraft"
+      - "traefik.tcp.routers.minecraft-rtr.rule=HostSNI(`*`)"
+      - "traefik.tcp.routers.minecraft-rtr.service=minecraft-svc"
+      - "traefik.tcp.services.minecraft-svc.loadbalancer.server.port=25577"
+
+  ###########################################################################
+  # Minecraft Fabric Backend - 離線模式，僅接受 Velocity 轉發或內部網路連線
   ###########################################################################
   minecraft:
     container_name: minecraft
@@ -15,26 +67,26 @@ services:
     tty: true
     stdin_open: true
     networks:
-      - t3_proxy
-    # ports removed to use Traefik
+      - t3_proxy           # 僅供 Traefik 接 UDP 語音封包
+      - minecraft_internal # Velocity 與後端 TCP 通道；未來 bot 容器加入此網路
     volumes:
       - ${DATADIR}/minecraft:/data
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=${TZ}
       - EULA=TRUE
-      - VERSION=${MINECRAFT_VERSION:-1.21.4}
+      - VERSION=${MINECRAFT_VERSION:-1.21.11}
       - TYPE=${MINECRAFT_TYPE:-FABRIC}
       - MEMORY=${MINECRAFT_MEMORY:-2G}
-      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servux,servercore,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux,voxy:alpha,voxy-worldgen,voxyserver:1.1.4,sodium,syncmatica,craterlib,sdlink,minimotd,tabtps,ledger,luckperms}
+      # 後端強制離線；正版驗證由 Velocity 處理，
+      # 未攜帶 forwarding secret 的直連會被 FabricProxy-Lite 拒絕。
+      - ONLINE_MODE=FALSE
+      - ENFORCE_SECURE_PROFILE=FALSE
+      # minimotd 已移到 Velocity 端，後端不再安裝（避免兩邊維護兩份設定）
+      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servux,servercore,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux,voxy:alpha,voxy-worldgen,voxyserver:1.1.4,sodium,syncmatica,craterlib,sdlink,tabtps,ledger,luckperms,fabricproxy-lite}
     labels:
       - "traefik.enable=true"
-      # TCP Router for Minecraft (Server supports no SNI, so we use HostSNI(`*`))
-      - "traefik.tcp.routers.minecraft-rtr.entrypoints=minecraft"
-      - "traefik.tcp.routers.minecraft-rtr.rule=HostSNI(`*`)"
-      - "traefik.tcp.routers.minecraft-rtr.service=minecraft-svc"
-      - "traefik.tcp.services.minecraft-svc.loadbalancer.server.port=25565"
-      # UDP Router for Voice Chat (if used)
+      # 僅保留 UDP 語音入口；TCP 已交給 Velocity，Traefik 不再為後端開 TCP route
       - "traefik.udp.routers.minecraft-voice-rtr.entrypoints=voicechat"
       - "traefik.udp.routers.minecraft-voice-rtr.service=minecraft-voice-svc"
       - "traefik.udp.services.minecraft-voice-svc.loadbalancer.server.port=24454"
@@ -42,3 +94,7 @@ services:
 networks:
   t3_proxy:
     external: true
+  minecraft_internal:
+    name: minecraft_internal
+    driver: bridge
+    internal: true
