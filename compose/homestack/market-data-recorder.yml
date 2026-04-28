@@ -1,5 +1,7 @@
 # market-data-recorder — NATS trade recorder + MinIO exporter
 # Source: /mnt/raid1/novis/home-stack/market-data-recorder
+# 部署：從 /opt/docker/ 執行，勿直接 -f 本檔（DOCKERDIR 不會被載入）
+#   docker compose -f docker-compose-homestack.yml up -d --build market-data-recorder
 
 services:
   market-data-recorder:
@@ -21,9 +23,6 @@ services:
       - TZ=${TZ:-UTC}
       - RECORDER_NATS_URL=nats://nats:4222
       - RECORDER_QUESTDB_HOST=questdb
-    depends_on:
-      - nats
-      - questdb
 
   market-data-export:
     container_name: market-data-export
