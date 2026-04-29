@@ -5,8 +5,8 @@
 # 架構：
 #   玩家 (TCP 25565) -> Traefik -> Velocity (online-mode=true, modern forwarding)
 #                                     -> Fabric backend (online-mode=false, FabricProxy-Lite)
-#   語音  (UDP 24454) -> Traefik -> Fabric backend (Simple Voice Chat 直送，不經 Velocity)
-# 後端 TCP 不對外暴露：Velocity 透過內部網路 minecraft_internal 連入。
+#   語音  (UDP 25577) -> Traefik -> Velocity (voicechat plugin) -> Fabric backend
+# 後端不對外暴露：對玩家流量僅走 minecraft_internal，另保留一般 bridge 網路供啟動時下載依賴。
 
 services:
   ###########################################################################
@@ -41,7 +41,7 @@ services:
       # pause-when-empty 維持有效。
       # MODRINTH_PROJECTS 需要 MINECRAFT_VERSION 用於相容性篩選（Velocity plugin 通常版本中立）
       - MINECRAFT_VERSION=${MINECRAFT_VERSION:-1.21.11}
-      - MODRINTH_PROJECTS=${VELOCITY_MODRINTH_PLUGINS:-minimotd}
+      - MODRINTH_PROJECTS=${VELOCITY_MODRINTH_PLUGINS:-minimotd,simple-voice-chat:alpha}
     deploy:
       resources:
         limits:
@@ -54,6 +54,10 @@ services:
       - "traefik.tcp.routers.minecraft-rtr.rule=HostSNI(`*`)"
       - "traefik.tcp.routers.minecraft-rtr.service=minecraft-svc"
       - "traefik.tcp.services.minecraft-svc.loadbalancer.server.port=25577"
+      # UDP Router for Simple Voice Chat - 由 Velocity plugin 接收後再轉發到後端
+      - "traefik.udp.routers.minecraft-voice-rtr.entrypoints=voicechat"
+      - "traefik.udp.routers.minecraft-voice-rtr.service=minecraft-voice-svc"
+      - "traefik.udp.services.minecraft-voice-svc.loadbalancer.server.port=25577"
 
   ###########################################################################
   # Minecraft Fabric Backend - 離線模式，僅接受 Velocity 轉發或內部網路連線
@@ -67,7 +71,7 @@ services:
     tty: true
     stdin_open: true
     networks:
-      - t3_proxy           # 僅供 Traefik 接 UDP 語音封包
+      - t3_proxy
       - minecraft_internal # Velocity 與後端 TCP 通道；未來 bot 容器加入此網路
     volumes:
       - ${DATADIR}/minecraft:/data
@@ -84,13 +88,6 @@ services:
       - ENFORCE_SECURE_PROFILE=FALSE
       # minimotd 已移到 Velocity 端，後端不再安裝（避免兩邊維護兩份設定）
       - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servux,servercore,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux,voxy:alpha,voxy-worldgen,voxyserver:1.1.4,sodium,syncmatica,craterlib,sdlink,tabtps,ledger,luckperms,fabricproxy-lite}
-    labels:
-      - "traefik.enable=true"
-      # 僅保留 UDP 語音入口；TCP 已交給 Velocity，Traefik 不再為後端開 TCP route
-      - "traefik.udp.routers.minecraft-voice-rtr.entrypoints=voicechat"
-      - "traefik.udp.routers.minecraft-voice-rtr.service=minecraft-voice-svc"
-      - "traefik.udp.services.minecraft-voice-svc.loadbalancer.server.port=24454"
-
 networks:
   t3_proxy:
     external: true

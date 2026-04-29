@@ -4,25 +4,29 @@
 
 - 玩家連線（TCP 25565）由 Velocity 代理做正版驗證後，再以 Velocity Modern Forwarding 轉送至後端 Fabric 伺服器。
 - Fabric 後端為 `online-mode=false`，透過 [FabricProxy-Lite](https://modrinth.com/mod/fabricproxy-lite) 驗證來自 Velocity 的 forwarding secret，未攜帶正確 secret 的直連會被拒絕。
-- Simple Voice Chat（UDP 24454）不經 Velocity，直接由 Traefik 轉到後端容器。
+- Simple Voice Chat（UDP 25577）由 Velocity proxy plugin 接收，再轉送到對應後端伺服器。
 
 ## 架構
 
 ```
 玩家 (正版) ─TCP 25565─▶ Traefik ─▶ minecraft-velocity (online-mode=true, modern fwd)
                                        │
+語音 ─UDP 25577─▶ Traefik ──────────────┤
+                                       │
                                        ▼ (network: minecraft_internal, internal=true)
                                      minecraft (online-mode=false, FabricProxy-Lite)
                                        ▲
-語音 ─UDP 24454─▶ Traefik ──────────────┘ (Simple Voice Chat 直接到後端)
+                                       └─ Simple Voice Chat 由 Velocity plugin 轉發
 ```
 
 | 容器 | 角色 | 對外埠 | 加入網路 |
 |------|------|--------|----------|
-| `minecraft-velocity` | 玩家入口、正版驗證 | TCP 25565（經 Traefik） | `t3_proxy`、`minecraft_internal` |
-| `minecraft` | Fabric 後端、語音 | UDP 24454（經 Traefik） | `t3_proxy`（語音）、`minecraft_internal`（與 Velocity 通訊） |
+| `minecraft-velocity` | 玩家入口、正版驗證、語音代理 | TCP 25565、UDP 25577（皆經 Traefik） | `t3_proxy`、`minecraft_internal` |
+| `minecraft` | Fabric 後端、語音終端 | 不對外暴露 | `default`（下載依賴）、`minecraft_internal`（與 Velocity 通訊） |
 
 `minecraft_internal` 設為 `internal: true`，後端 TCP 25565 不會經由 Docker bridge 對外暴露。
+後端也不再加入 `t3_proxy`，Simple Voice Chat 的 UDP 僅需對外開在 Velocity proxy。
+另外 backend 仍保留 compose 預設 `default` bridge 網路，僅用於容器啟動時對外下載 Fabric loader / mods；因為沒有 `ports:` 映射，依然不會直接對外提供服務。
 
 ## 環境變數（.env）
 
@@ -47,7 +51,7 @@
 | `VELOCITY_MEMORY_LIMIT` | compose `deploy.resources.limits.memory` | `768m` |
 | `VELOCITY_CPU_LIMIT` | compose `deploy.resources.limits.cpus` | `1.0` |
 | `VELOCITY_IMAGE_TAG` | itzg/mc-proxy 映像標籤 | `latest` |
-| `VELOCITY_MODRINTH_PLUGINS` | Velocity 端 Modrinth plugin 清單 | `minimotd` |
+| `VELOCITY_MODRINTH_PLUGINS` | Velocity 端 Modrinth plugin 清單 | `minimotd,simple-voice-chat:alpha` |
 
 ## Forwarding secret（必要前置）
 
@@ -92,9 +96,19 @@ EOF
 |--------|------|----------|
 | Velocity 主設定 | `appdata/velocity/velocity.toml` | ✅（hand-written） |
 | Velocity forwarding secret | `secrets/velocity_forwarding_secret` | ❌（git-ignored） |
+| Simple Voice Chat proxy 設定 | `${DATADIR}/velocity/plugins/voicechat/voicechat-proxy.properties` | ❌（runtime data） |
 | FabricProxy-Lite 設定 | `${DATADIR}/minecraft/config/FabricProxy-Lite.toml` | ❌（含 secret，禁止版控） |
 | MiniMOTD 設定 | `${DATADIR}/velocity/plugins/minimotd-velocity/main.conf` + `icons/` | ❌（runtime data） |
 | 後端世界與 server.properties | `${DATADIR}/minecraft/` | ❌ |
+
+## Simple Voice Chat Proxy
+
+- Velocity 端需要安裝 `simple-voice-chat` plugin；backend 仍需安裝 `simple-voice-chat` mod，proxy 後面的每台 Minecraft server 都要有語音端。
+- 目前 Modrinth 上的 Velocity 版 `simple-voice-chat` 僅提供 `alpha` 候選版，因此 compose 預設使用 `simple-voice-chat:alpha`，避免 itzg 映像只接受 `release` 版本時啟動失敗。
+- 對外只需開一個 UDP 埠給 proxy。此部署改採官方常見做法，使用 `25577/udp`。
+- plugin 第一次啟動後會產生 `${DATADIR}/velocity/plugins/voicechat/voicechat-proxy.properties`。
+- 若保留預設 `port=-1`，plugin 會沿用 Velocity proxy 的遊戲埠 `25577`；若你想明確寫死，也可改成 `port=25577`。
+- `voice_host` 通常不需要手動調整；只有在要強制公告不同主機名或埠號時才需修改。
 
 ## MOTD / 圖示
 
@@ -127,6 +141,26 @@ docker compose -f docker-compose-app.yml stop minecraft
 # 5. 啟動完整 stack
 docker compose -f docker-compose-app.yml up -d minecraft minecraft-velocity
 ```
+
+首次啟動 `minecraft-velocity` 後，建議確認 voice chat proxy 設定已生成且埠號正確：
+
+```bash
+grep -E '^(port|voice_host)=' /mnt/raid1/velocity/plugins/voicechat/voicechat-proxy.properties
+```
+
+預期至少看到以下其中一種：
+
+```properties
+port=-1
+```
+
+或
+
+```properties
+port=25577
+```
+
+若你手動修改成其他值，記得同步調整 Traefik `voicechat` entrypoint、router port forward 與文件。
 
 ## 常用指令
 
@@ -183,6 +217,7 @@ tar -czvf velocity-plugins-$(date +%Y%m%d-%H%M%S).tar.gz \
 | 玩家被踢 `This server requires you to connect with Velocity.` | secret 不一致 / 直連到後端 | 確認 `velocity_forwarding_secret` 與 `FabricProxy-Lite.toml` 的 `secret` 內容一致；檢查 secret 檔末尾沒有 `\n` |
 | Velocity 啟動失敗 `Can't parse your MOTD ... Legacy formatting codes` | `velocity.toml` 內仍是 `§` 顏色碼 | 改成 MiniMessage 格式 |
 | Velocity 啟動失敗 `chown: changing ownership of '/server/forwarding.secret': Read-only file system` | 用 docker secret 而非 bind mount | 維持 compose 內 bind mount 寫法 |
+| 語音 client 連不上，但遊戲可正常登入 | Router / 防火牆仍只開 `24454/udp` 或 Traefik 未改成 `25577/udp` | 關閉 `24454/udp`，改放行並轉發 `25577/udp` 到 Traefik；確認 proxy config `port` 與 Traefik 一致 |
 | MOTD 顯示成 `server.properties` 那行而不是 MiniMOTD 隨機文案 | MiniMOTD 還沒搬到 Proxy / Velocity 沒套 plugin | 確認 `${DATADIR}/velocity/plugins/minimotd-velocity/` 存在、`MODRINTH_PROJECTS` 含 `minimotd` |
 | LP 警告 `UUID is NOT Mojang-assigned (type 3)` | 後端把 forwarding 失效，玩家被當離線 | 確認 backend log 有 `fabricproxy-lite` 載入；FabricProxy-Lite secret 正確 |
 
