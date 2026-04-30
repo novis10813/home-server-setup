@@ -96,10 +96,50 @@ EOF
 |--------|------|----------|
 | Velocity 主設定 | `appdata/velocity/velocity.toml` | ✅（hand-written） |
 | Velocity forwarding secret | `secrets/velocity_forwarding_secret` | ❌（git-ignored） |
+| Global Whitelist 設定 | `${DATADIR}/velocity/plugins/global-whitelist/config.properties` | ❌（runtime data） |
+| Global Whitelist 名單 | `${DATADIR}/velocity/plugins/global-whitelist/whitelist.json` | ❌（runtime data） |
 | Simple Voice Chat proxy 設定 | `${DATADIR}/velocity/plugins/voicechat/voicechat-proxy.properties` | ❌（runtime data） |
 | FabricProxy-Lite 設定 | `${DATADIR}/minecraft/config/FabricProxy-Lite.toml` | ❌（含 secret，禁止版控） |
 | MiniMOTD 設定 | `${DATADIR}/velocity/plugins/minimotd-velocity/main.conf` + `icons/` | ❌（runtime data） |
 | 後端世界與 server.properties | `${DATADIR}/minecraft/` | ❌ |
+
+## 白名單（Global Whitelist）
+
+白名單由 [Global Whitelist](https://modrinth.com/plugin/global-whitelist) 在 **Velocity 層**管理，而非後端 Minecraft server。
+
+**設計原因**：後端允許機器人（bot）容器加入 `minecraft_internal` 網路直連，若白名單放在後端，機器人也需要加入白名單。改放在 Velocity 層後，機器人繞過 Velocity 直連後端不受白名單限制，真人玩家仍須通過 Velocity 驗證。
+
+> 插件版本不在 Modrinth 的 `1.21.x` 相容性宣告內，因此不透過 `MODRINTH_PROJECTS` 安裝，而是手動放置 jar：
+> `${DATADIR}/velocity/plugins/global-whitelist-1.0.jar`
+
+後端的 `white-list` 保持 `false`（`server.properties`）。
+
+### 管理玩家
+
+透過 Velocity 控制台（`docker attach minecraft-velocity`，Ctrl+P Ctrl+Q 離開）：
+
+```
+globalwhitelist add <玩家名>
+globalwhitelist remove <玩家名>
+globalwhitelist list
+globalwhitelist reload
+```
+
+或直接編輯 `whitelist.json` 後執行 `globalwhitelist reload`。`whitelist.json` 格式與原版相同：
+
+```json
+[{"uuid":"xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx","name":"PlayerName"}]
+```
+
+新增玩家時需要 Mojang UUID（帶連字號格式）：
+
+```bash
+curl -s "https://api.mojang.com/users/profiles/minecraft/<玩家名>" | python3 -c "
+import sys, json, uuid
+d = json.load(sys.stdin)
+print(str(uuid.UUID(d['id'])), d['name'])
+"
+```
 
 ## Simple Voice Chat Proxy
 
