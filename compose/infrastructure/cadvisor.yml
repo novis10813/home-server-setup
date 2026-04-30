@@ -29,6 +29,6 @@ services:
     command:
       - --housekeeping_interval=30s
       - --docker_only=true  # 僅收集 Docker 容器指標
-      - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl
+      - --disable_metrics=percpu,sched,tcp,udp,disk,diskIO,hugetlb,referenced_memory,cpu_topology,resctrl,accelerator,memory_numa,oom_event,process
     # 不對外暴露，僅供 Prometheus 內部抓取
     # Port: 8080 (container internal)

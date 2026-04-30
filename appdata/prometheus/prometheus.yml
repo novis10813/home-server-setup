@@ -42,6 +42,7 @@ scrape_configs:
 
   # cAdvisor - 容器層級指標
   - job_name: 'cadvisor'
+    scrape_interval: 30s  # 對齊 cadvisor housekeeping_interval，避免無效抓取
     static_configs:
       - targets: ['cadvisor:8080']
         labels:
