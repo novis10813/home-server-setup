@@ -5,8 +5,8 @@ services:
   crypto-relay:
     container_name: crypto-relay
     build:
-      context: /mnt/raid1/novis/home-stack/crypto-relay
-      dockerfile: Dockerfile
+      context: /mnt/raid1/novis/home-stack
+      dockerfile: crypto-relay/Dockerfile
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
