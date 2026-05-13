@@ -1,0 +1,44 @@
+# SearXNG settings
+# https://docs.searxng.org/admin/settings/index.html
+
+use_default_settings: true
+
+general:
+  debug: false
+  instance_name: "SearXNG"
+  privacypolicy_url: false
+  contact_url: false
+  enable_metrics: false
+
+server:
+  secret_key: "968181754cd27d739553733b9241037415fc150fdd069c01d2b8a09c66e31157"
+  limiter: false  # disable rate limiting for internal AI agent use
+  image_proxy: false
+  base_url: false
+  port: 8080
+  bind_address: "0.0.0.0"
+
+ui:
+  static_use_hash: true
+  default_locale: "zh-Hant-TW"
+  default_theme: simple
+  results_on_new_tab: false
+
+search:
+  safe_search: 0
+  autocomplete: ""
+  default_lang: "zh-TW"
+  formats:
+    - html
+    - json  # required for AI agent API access
+
+# Redis not needed for single-instance without limiter
+redis:
+  url: false
+
+outgoing:
+  useragent_suffix: "novis10813-SearXNGBot/1.0 (mailto:zhizhongz895253@gmail.com)"
+
+engines:
+  - name: wikidata
+    disabled: true
