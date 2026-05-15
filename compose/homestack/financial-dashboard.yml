@@ -26,6 +26,24 @@ services:
       - "traefik.http.routers.dash-rtr.service=dash-svc"
       - "traefik.http.services.dash-svc.loadbalancer.server.port=80"
 
+  dashboard-api:
+    container_name: dashboard-api
+    build:
+      context: /mnt/raid1/novis/home-stack/financial-dashboard/api
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/dashboard-api:/data
+    environment:
+      - TZ=${TZ:-UTC}
+      - DB_PATH=/data/config.db
+      - PORT=3001
+
 networks:
   t3_proxy:
     external: true
