@@ -13,6 +13,8 @@ networks:
 secrets:
   immich_db_password:
     file: ${DOCKERDIR}/secrets/immich_db_password
+  couchdb_password:
+    file: ${DOCKERDIR}/secrets/couchdb_password
 
 ########################### INCLUDES
 include:
@@ -24,3 +26,4 @@ include:
   - compose/apps/minecraft.yml
   - compose/apps/portainer.yml
   - compose/apps/searxng.yml
+  - compose/apps/couchdb.yml

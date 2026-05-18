@@ -1,0 +1,23 @@
+http:
+  middlewares:
+    chain-couchdb:
+      chain:
+        middlewares:
+          - middlewares-rate-limit
+          - middlewares-couchdb-headers
+
+    middlewares-couchdb-headers:
+      headers:
+        hostsProxyHeaders:
+          - "X-Forwarded-Host"
+        stsSeconds: 63072000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "same-origin"
+        customResponseHeaders:
+          X-Robots-Tag: "none,noindex,nofollow,noarchive,nosnippet,notranslate,noimageindex"
+          server: ""
+        customRequestHeaders:
+          X-Forwarded-Proto: https

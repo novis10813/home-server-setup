@@ -1,0 +1,40 @@
+# CouchDB - Obsidian LiveSync sync backend
+# https://github.com/vrtmrz/obsidian-livesync
+
+services:
+  couchdb:
+    container_name: couchdb
+    image: couchdb:3
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/couchdb/data:/opt/couchdb/data
+      - ${DOCKERDIR}/appdata/couchdb/local.ini:/opt/couchdb/etc/local.d/local.ini
+      - ${DOCKERDIR}/appdata/couchdb/entrypoint-wrapper.sh:/entrypoint-wrapper.sh:ro
+      - /etc/localtime:/etc/localtime:ro
+    entrypoint: ["/bin/sh", "/entrypoint-wrapper.sh"]
+    command: ["/opt/couchdb/bin/couchdb"]
+    environment:
+      - TZ=${TZ}
+      - COUCHDB_USER=${COUCHDB_USER}
+    secrets:
+      - couchdb_password
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf -u ${COUCHDB_USER}:$(cat /run/secrets/couchdb_password) http://localhost:5984/ > /dev/null"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      ## HTTPS Router (internal only)
+      - "traefik.http.routers.couchdb-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.couchdb-rtr.rule=Host(`couchdb.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.couchdb-rtr.middlewares=chain-couchdb@file"
+      ## Service
+      - "traefik.http.routers.couchdb-rtr.service=couchdb-svc"
+      - "traefik.http.services.couchdb-svc.loadbalancer.server.port=5984"

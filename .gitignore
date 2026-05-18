@@ -2,6 +2,8 @@
 secrets/*
 !secrets/README.md
 appdata/traefik/acme/acme.json
+# CouchDB 執行時寫入管理員雜湊和 UUID，含敏感資料
+appdata/couchdb/local.ini
 logs/
 # MkDocs 建置輸出
 site/
