@@ -19,7 +19,7 @@ services:
       - "traefik.http.routers.questdb-rtr.service=questdb-svc"
       - "traefik.http.services.questdb-svc.loadbalancer.server.port=9000"
     volumes:
-      - ${DOCKERDIR}/appdata/questdb/server.ini:/var/lib/questdb/conf/server.ini:ro
+      - ${DOCKERDIR}/appdata/questdb/server.conf:/var/lib/questdb/conf/server.conf:ro
       - ${DATADIR}/questdb:/var/lib/questdb/db
       - /etc/localtime:/etc/localtime:ro
     environment:
