@@ -33,6 +33,29 @@ docker compose -f docker-compose-infrastructure.yml config
 docker exec traefik traefik healthcheck
 ```
 
+### Cron 排程服務監控與驗證
+
+#### 1. 查看 `cron` 排程發送紀錄
+由於 `cron` 服務已啟用詳細日誌，當排程被觸發時，你可以直接透過容器日誌查看發送指令：
+```bash
+docker logs cron
+```
+*正常執行時會輸出類似 `crond: USER root pid ... cmd wget...` 的紀錄。*
+
+#### 2. 查看安全代理 `socket-proxy` 的存取紀錄
+排程器所發送的重啟 API 請求會經過安全代理，你可以從中確認請求是否順利被批准與執行：
+```bash
+docker logs socket-proxy | grep minecraft
+```
+*成功時應看到 `[OK] POST /v1.41/containers/minecraft/restart` 的字樣。*
+
+#### 3. 檢查目標容器的 Uptime
+直接確認被重啟容器的運作時間與日誌：
+```bash
+docker ps -f name=minecraft --format "table {{.Names}}\t{{.Status}}"
+```
+
+
 ### 憑證與 Secrets
 
 ```bash
@@ -64,6 +87,16 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 docker compose -f docker-compose-infrastructure.yml pull
 docker compose -f docker-compose-infrastructure.yml up -d
 ```
+
+### 修改與重新套用 Cron 排程
+
+當你需要編輯重啟時間或新增其他容器的排程任務時，請按照下列步驟操作：
+
+1. 編輯排程設定檔 `${DOCKERDIR}/appdata/cron/crontab`。
+2. 重啟 `cron` 服務以重新載入設定：
+   ```bash
+   docker compose -f docker-compose-infrastructure.yml --profile network restart cron
+   ```
 
 ### 備份建議
 

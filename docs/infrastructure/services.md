@@ -159,6 +159,18 @@
 
 ---
 
+## Cron（容器重啟排程器）
+
+- **檔案**：`compose/infrastructure/cron.yml`
+- **映像**：`alpine:latest`
+- **依賴**：`socket-proxy`
+- **網路**：`socket_proxy`
+- **用途**：執行內建的 `crond`，透過 `socket-proxy` 發送安全的 Docker API 請求，定時對特定容器執行重啟、啟動或停止等維護任務，無須掛載宿主機 `/var/run/docker.sock`。
+- **設定**：`${DOCKERDIR}/appdata/cron/crontab` 唯讀掛載至 `/etc/crontabs/root`。
+- **安全性**：啟用 `no-new-privileges:true`，加入最低資源限制，且隔離於業務網路之外，僅連接 `socket_proxy`。
+
+---
+
 ## 安全與慣例
 
 - 所有服務：`security_opt: - no-new-privileges:true`、`restart: unless-stopped`。
