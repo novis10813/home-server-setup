@@ -1,0 +1,24 @@
+# Cron Scheduler - runs crond inside alpine container to trigger docker API actions securely via socket-proxy
+
+services:
+  cron:
+    container_name: cron
+    image: alpine:latest
+    profiles:
+      - all
+      - network
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    depends_on:
+      - socket-proxy
+    networks:
+      - socket_proxy
+    volumes:
+      - ${DOCKERDIR}/appdata/cron/crontab:/etc/crontabs/root:ro
+    entrypoint: ["crond", "-f", "-d", "8"]
+    deploy:
+      resources:
+        limits:
+          memory: 64m
+          cpus: "0.1"

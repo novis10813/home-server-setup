@@ -47,6 +47,7 @@ include:
   - compose/infrastructure/traefik.yml
   - compose/infrastructure/traefik-forward-auth.yml
   - compose/infrastructure/pihole.yml
+  - compose/infrastructure/cron.yml
   # Monitoring (profile: monitor)
   - compose/infrastructure/prometheus.yml
   - compose/infrastructure/alertmanager.yml

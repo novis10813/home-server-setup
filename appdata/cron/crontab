@@ -1,0 +1,4 @@
+# 每週日凌晨 04:00 重啟 minecraft 容器
+0 4 * * 0 wget --post-data="" -qO- http://socket-proxy:2375/containers/minecraft/restart
+
+
