@@ -87,7 +87,7 @@ services:
       - ONLINE_MODE=FALSE
       - ENFORCE_SECURE_PROFILE=FALSE
       # minimotd 已移到 Velocity 端，後端不再安裝（避免兩邊維護兩份設定）
-      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servux,servercore,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux,voxy:alpha,voxy-worldgen,voxyserver:1.1.4,sodium,syncmatica,craterlib,sdlink,tabtps,ledger,luckperms,fabricproxy-lite}
+      - MODRINTH_PROJECTS=${MINECRAFT_MODRINTH_MODS:-fabric-api,lithium,ferrite-core,krypton,c2me-fabric,carpet,servux,servercore,bar,fabric-language-kotlin,simple-voice-chat,polysit,polymer,scalablelux,voxy:alpha,voxy-worldgen,voxyserver:1.1.4,sodium:mc1.21.11-0.8.11-fabric,syncmatica,craterlib,sdlink,tabtps,ledger,luckperms,fabricproxy-lite}
 networks:
   t3_proxy:
     external: true
