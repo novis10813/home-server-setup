@@ -47,3 +47,10 @@ scrape_configs:
       - targets: ['cadvisor:8080']
         labels:
           instance: 'homeserver'
+
+  # Crypto relay - Local L2 sync and NATS publish metrics
+  - job_name: 'crypto-relay'
+    static_configs:
+      - targets: ['crypto-relay:9090']
+        labels:
+          instance: 'crypto-relay'
