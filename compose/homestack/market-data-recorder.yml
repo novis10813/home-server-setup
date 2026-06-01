@@ -9,6 +9,8 @@ services:
     build:
       context: /mnt/raid1/novis/home-stack/market-data-recorder
       dockerfile: Dockerfile
+      additional_contexts:
+        homemq-py: /mnt/raid1/novis/home-stack/homeMQ-py
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -17,12 +19,16 @@ services:
       - homestack     # QuestDB (questdb:9000)
     volumes:
       - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/market-data-recorder:/data
     env_file:
       - ${DOCKERDIR}/secrets/market-data-recorder.env
     environment:
       - TZ=${TZ:-UTC}
       - RECORDER_NATS_URL=nats://nats:4222
       - RECORDER_QUESTDB_HOST=questdb
+      - RECORDER_DB_PATH=/data/recording.db
+      - RECORDER_ADMIN_HOST=0.0.0.0
+      - RECORDER_ADMIN_PORT=8080
 
   market-data-export:
     container_name: market-data-export
