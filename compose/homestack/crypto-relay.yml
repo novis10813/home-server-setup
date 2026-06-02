@@ -5,8 +5,10 @@ services:
   crypto-relay:
     container_name: crypto-relay
     build:
-      context: /mnt/raid1/novis/home-stack
-      dockerfile: crypto-relay/Dockerfile
+      context: /mnt/raid1/novis/home-stack/crypto-relay
+      dockerfile: Dockerfile
+      additional_contexts:
+        homemq-rs: /mnt/raid1/novis/home-stack/homeMQ-rs
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
