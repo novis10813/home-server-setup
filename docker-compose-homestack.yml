@@ -13,6 +13,7 @@ networks:
 ########################### INCLUDES
 include:
   - compose/homestack/nats.yml
+  - compose/homestack/redis.yml
   - compose/homestack/crypto-relay.yml
   - compose/homestack/financial-dashboard.yml
   - compose/homestack/questdb.yml

@@ -34,8 +34,12 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
+    depends_on:
+      redis:
+        condition: service_healthy
     networks:
       - t3_proxy
+      - homestack
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${DATADIR}/dashboard-api:/data
@@ -43,7 +47,13 @@ services:
       - TZ=${TZ:-UTC}
       - DB_PATH=/data/config.db
       - PORT=3001
+      - REDIS_URL=redis://redis:6379
+      - BOOKMAP_CACHE_TTL_SEC=360
+      - BOOKMAP_CACHE_COLUMNS=300
+      - BOOKMAP_CACHE_SAMPLE_MS=1000
 
 networks:
   t3_proxy:
+    external: true
+  homestack:
     external: true
