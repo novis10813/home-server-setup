@@ -5,7 +5,7 @@ visual data.
 
 ## Purpose
 
-- Store the latest 5 minutes of derived Heatmap columns and Volume Bubble records.
+- Store the latest 15 minutes of derived Heatmap columns and Volume Bubble records.
 - Let `financial-dashboard` hydrate PairFocus immediately after card reopen or browser
   refresh.
 - Avoid storing long-term raw orderbook history in Redis.
@@ -27,8 +27,8 @@ This is intentional because the cache is short-lived visual state.
 
 ```text
 REDIS_URL=redis://redis:6379
-BOOKMAP_CACHE_TTL_SEC=360
-BOOKMAP_CACHE_COLUMNS=300
+BOOKMAP_CACHE_TTL_SEC=900
+BOOKMAP_CACHE_COLUMNS=900
 BOOKMAP_CACHE_SAMPLE_MS=1000
 ```
 

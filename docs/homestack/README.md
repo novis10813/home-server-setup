@@ -15,7 +15,7 @@
 | 服務 | 說明 | 詳細文件 |
 |------|------|----------|
 | NATS | 訊息佇列與 JetStream；客戶端協定 **不**經 Traefik 暴露 | [NATS](nats.md) |
-| Redis | Ephemeral 5-minute Bookmap hot cache for `financial-dashboard` | [Redis](redis.md) |
+| Redis | Ephemeral 15-minute Bookmap hot cache for `financial-dashboard` | [Redis](redis.md) |
 | crypto-relay | Binance WebSocket → NATS 市場資料 relay | root repo `ROADMAP.md` |
 | financial-dashboard | `dash.${DOMAINNAME_1}` liquidity 與 recording policies UI | root repo `ROADMAP.md` |
 | market-data-recorder | SQLite 長期錄製政策 → QuestDB；admin API 僅供內網反代 | root repo `ROADMAP.md` |
