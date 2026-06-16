@@ -1,0 +1,41 @@
+# market-data-archiver — QuestDB to raw Parquet S3 archive
+# Source: /mnt/raid1/novis/home-stack/market-data-archiver
+# 部署：從 /opt/docker/ 執行，勿直接 -f 本檔（DOCKERDIR 不會被載入）
+#   docker compose -f docker-compose-homestack.yml up -d --build market-data-archiver
+
+services:
+  market-data-archiver:
+    container_name: market-data-archiver
+    build:
+      context: /mnt/raid1/novis/home-stack/market-data-archiver
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack     # QuestDB (questdb:9000); MinIO 走外網 HTTP
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/market-data-archiver:/data
+    env_file:
+      - ${DOCKERDIR}/secrets/market-data-archiver.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=${TZ:-UTC}
+      - ARCHIVER_QUESTDB_HOST=questdb
+      - ARCHIVER_QUESTDB_REST_PORT=9000
+      - ARCHIVER_S3_BUCKET=market-data
+      - ARCHIVER_S3_PREFIX=raw
+      - ARCHIVER_DATA_DIR=/data
+      - ARCHIVER_LAG_MINUTES=15
+      - ARCHIVER_INTERVAL_SECONDS=300
+      - ARCHIVER_COMPRESSION=zstd
+      - ARCHIVER_DELETE_AFTER_ARCHIVE=false
+      - ARCHIVER_ADMIN_HOST=0.0.0.0
+      - ARCHIVER_ADMIN_PORT=8080
+    depends_on:
+      - questdb
+
+networks:
+  homestack:
+    external: true

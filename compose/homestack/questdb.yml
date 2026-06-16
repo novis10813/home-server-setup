@@ -27,7 +27,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 2g
+          memory: "${QUESTDB_MEMORY_LIMIT:-6g}"
           # 提高 CPU 上限以降低 CFS 節流（cAdvisor throttled periods）
           cpus: "${QUESTDB_CPU_LIMIT:-4.0}"
     healthcheck:
