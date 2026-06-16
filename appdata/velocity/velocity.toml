@@ -1,36 +1,29 @@
 # Velocity 3 主設定 - 玩家正版驗證入口（hand-written, version-controlled）
 # 文件：https://docs.papermc.io/velocity/configuration
-
-config-version = "2.7"
-
+config-version = "2.8"
 # Velocity 監聽位址（容器內），由 Traefik TCP 入口 minecraft:25565 對外
 bind = "0.0.0.0:25577"
-
 motd = "<bold><green>社畜服</green></bold><newline><gray>死做活做像條狗 被打不能汪汪叫</gray>"
 show-max-players = 50
-
 # 在 Proxy 層做正版驗證；後端永遠是 offline-mode
 online-mode = true
 force-key-authentication = true
 prevent-client-proxy-connections = false
-
 # Modern forwarding：與 FabricProxy-Lite 共用 secret
 player-info-forwarding-mode = "modern"
 forwarding-secret-file = "forwarding.secret"
-
 announce-forge = false
 announce-proxy-commands = true
 kick-existing-players = false
 ping-passthrough = "DISABLED"
 sample-players-in-ping = false
 enable-player-address-logging = true
+forced-hosts = {}
 
 # 後端伺服器列表 — 容器名 minecraft，於 minecraft_internal 網路解析
 [servers]
 lobby = "minecraft:25565"
 try = ["lobby"]
-
-[forced-hosts]
 
 [advanced]
 compression-threshold = 256
@@ -53,3 +46,16 @@ enabled = false
 port = 25577
 map = "Velocity"
 show-plugins = false
+
+[packet-limiter]
+#Size of the moving time window in seconds used to calculate average rates.
+#A larger window tolerates short bursts while still enforcing the configured limits over time.
+interval = 7
+#Maximum average number of packets per second a client may send. -1 disables this check.
+packets-per-second = -1
+#Maximum average number of compressed (on-wire) bytes per second a client may send. -1 disables this check.
+bytes-per-second = -1
+#Maximum average number of decompressed bytes per second a client may send.
+#Protects against compression bomb attacks where small packets expand to excessive sizes after decompression.
+#-1 disables this check.
+decompressed-bytes-per-second = 5242880
