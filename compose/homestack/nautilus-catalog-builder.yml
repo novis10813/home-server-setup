@@ -1,0 +1,29 @@
+# nautilus-catalog-builder — raw Parquet to NautilusTrader catalog batch
+# Source: /mnt/raid1/novis/home-stack/nautilus-catalog-builder
+# 部署：從 /opt/docker/ 執行，勿直接 -f 本檔（DOCKERDIR 不會被載入）
+#   docker compose -f docker-compose-homestack.yml up -d --build nautilus-catalog-builder
+
+services:
+  nautilus-catalog-builder:
+    container_name: nautilus-catalog-builder
+    build:
+      context: /mnt/raid1/novis/home-stack/nautilus-catalog-builder
+      dockerfile: Dockerfile
+    restart: "no"
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/nautilus-catalog-builder:/data
+    env_file:
+      - ${DOCKERDIR}/secrets/nautilus-catalog-builder.env
+    environment:
+      - PYTHONUNBUFFERED=1
+      - TZ=${TZ:-UTC}
+    command: ["build-closed-days"]
+
+networks:
+  homestack:
+    external: true

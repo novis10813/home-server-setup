@@ -19,3 +19,4 @@ include:
   - compose/homestack/questdb.yml
   - compose/homestack/market-data-recorder.yml
   - compose/homestack/market-data-archiver.yml
+  - compose/homestack/nautilus-catalog-builder.yml
