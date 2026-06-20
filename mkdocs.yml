@@ -36,6 +36,7 @@ nav:
   - Infrastructure:
     - 概述: infrastructure/README.md
     - 架構與目錄: infrastructure/architecture.md
+    - 網路圖: infrastructure/network-diagram.md
     - 設定與環境: infrastructure/configuration.md
     - 服務說明: infrastructure/services.md
     - Traefik 規則: infrastructure/traefik-rules.md

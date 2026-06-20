@@ -4,6 +4,8 @@
 
 整體架構與命名方式參考 [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)：該專案在根目錄下為每台 Home Server 各準備一份 Compose 檔。由於目前僅有一台主機，這裡改為依**服務類型**劃分，每一份 Compose 對應一類職責。
 
+![Home Server network overview](docs/diagrams/home-server-overview.png)
+
 ---
 
 ## Compose 檔案與職責劃分

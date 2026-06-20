@@ -1,0 +1,225 @@
+direction: right
+
+classes: {
+  zone: {
+    style: {
+      fill: "#f8fafc"
+      stroke: "#94a3b8"
+      border-radius: 8
+    }
+  }
+  service: {
+    shape: rectangle
+    style: {
+      fill: "#ffffff"
+      stroke: "#64748b"
+      border-radius: 6
+    }
+  }
+  datastore: {
+    shape: cylinder
+    style: {
+      fill: "#fff7ed"
+      stroke: "#ea580c"
+    }
+  }
+  network: {
+    shape: hexagon
+    style: {
+      fill: "#ecfeff"
+      stroke: "#0891b2"
+    }
+  }
+}
+
+internet: Internet {
+  class: network
+  icon: https://cdn.simpleicons.org/cloudflare/F38020
+}
+
+lan: LAN clients {
+  class: network
+}
+
+host: Home Server Docker Host {
+  class: zone
+
+  edge: Edge / Gateway {
+    class: zone
+
+    traefik: Traefik v3 {
+      class: service
+      icon: https://cdn.simpleicons.org/traefikproxy/24A1C1
+    }
+
+    socket: Socket Proxy {
+      class: service
+      icon: https://cdn.simpleicons.org/docker/2496ED
+    }
+
+    oauth: OAuth SSO {
+      class: service
+      icon: https://cdn.simpleicons.org/google/4285F4
+    }
+
+    pihole: Pi-hole {
+      class: service
+      icon: https://cdn.simpleicons.org/pihole/96060C
+    }
+  }
+
+  apps: Apps {
+    class: zone
+
+    immich: Immich {
+      class: service
+      icon: https://cdn.simpleicons.org/immich/4250AF
+    }
+    homeassistant: Home Assistant {
+      class: service
+      icon: https://cdn.simpleicons.org/homeassistant/18BCF2
+    }
+    portainer: Portainer {
+      class: service
+      icon: https://cdn.simpleicons.org/portainer/13BEF9
+    }
+    search: SearXNG {
+      class: service
+      icon: https://cdn.simpleicons.org/searxng/3050FF
+    }
+    books: Calibre / Kavita / Shelfmark {
+      class: service
+    }
+    couchdb: CouchDB {
+      class: service
+      icon: https://cdn.simpleicons.org/apachecouchdb/E42528
+    }
+    minecraft: Minecraft {
+      class: service
+    }
+  }
+
+  media: Media {
+    class: zone
+
+    jellyfin: Jellyfin {
+      class: service
+      icon: https://cdn.simpleicons.org/jellyfin/00A4DC
+    }
+    requests: Jellyseerr {
+      class: service
+    }
+    arr: Sonarr / Radarr / Prowlarr / Bazarr {
+      class: service
+    }
+    qbittorrent: qBittorrent {
+      class: service
+      icon: https://cdn.simpleicons.org/qbittorrent/2F67BA
+    }
+  }
+
+  homestack: Home stack {
+    class: zone
+
+    nats: NATS {
+      class: service
+      icon: https://cdn.simpleicons.org/natsdotio/27AAE1
+    }
+    redis: Redis {
+      class: service
+      icon: https://cdn.simpleicons.org/redis/DC382D
+    }
+    questdb: QuestDB {
+      class: service
+    }
+    market: Market data services {
+      class: service
+    }
+    dashboard: Financial dashboard {
+      class: service
+    }
+  }
+
+  monitoring: Monitoring {
+    class: zone
+
+    prometheus: Prometheus {
+      class: service
+      icon: https://cdn.simpleicons.org/prometheus/E6522C
+    }
+    alertmanager: Alertmanager {
+      class: service
+    }
+    grafana: Grafana {
+      class: service
+      icon: https://cdn.simpleicons.org/grafana/F46800
+    }
+    loki: Loki / Promtail {
+      class: service
+      icon: https://cdn.simpleicons.org/grafana/F46800
+    }
+    exporters: Node Exporter / cAdvisor {
+      class: service
+      icon: https://cdn.simpleicons.org/docker/2496ED
+    }
+  }
+
+  storage: Config and data {
+    class: zone
+
+    appdata: "DOCKERDIR/appdata" {
+      class: datastore
+    }
+    datadir: "DATADIR runtime data" {
+      class: datastore
+    }
+    secrets: "secrets/" {
+      class: datastore
+    }
+  }
+}
+
+t3: "t3_proxy\n192.168.90.0/24" {
+  class: network
+}
+
+socketnet: "socket_proxy\n192.168.91.0/24" {
+  class: network
+}
+
+homestacknet: "homestack\nbridge" {
+  class: network
+}
+
+internet -> host.edge.traefik: 80/443, 81/444
+lan -> host.edge.pihole: DNS
+lan -> host.edge.traefik: internal HTTPS
+
+host.edge.traefik -> t3
+host.edge.traefik -> socketnet
+host.edge.traefik -> host.edge.oauth: forwardAuth
+host.edge.traefik -> host.edge.socket: Docker discovery
+
+t3 -> host.apps
+t3 -> host.media
+t3 -> host.homestack
+t3 -> host.monitoring
+socketnet -> host.edge.socket
+homestacknet -> host.homestack
+
+host.apps -> host.storage.datadir
+host.media -> host.storage.datadir
+host.homestack -> host.storage.datadir
+host.edge -> host.storage.appdata
+host.monitoring -> host.storage.appdata
+host.edge -> host.storage.secrets
+
+host.monitoring.prometheus -> host.monitoring.exporters: scrape
+host.monitoring.prometheus -> host.monitoring.alertmanager: alerts
+host.monitoring.grafana -> host.monitoring.prometheus: metrics
+host.monitoring.grafana -> host.monitoring.loki: logs
+host.monitoring.loki -> host.monitoring.loki: ingest
+
+host.homestack.market -> host.homestack.nats: streams
+host.homestack.market -> host.homestack.questdb: time-series data
+host.homestack.dashboard -> host.homestack.questdb: queries
