@@ -43,6 +43,7 @@ nav:
     - 操作與維護: infrastructure/operations.md
   - App:
     - 概述: app/README.md
+    - Hugo: app/hugo.md
     - Home Assistant: app/home-assistant.md
     - Minecraft: app/minecraft.md
   - Media:

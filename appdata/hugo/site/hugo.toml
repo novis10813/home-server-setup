@@ -1,0 +1,33 @@
+baseURL = "https://novis.page/"
+languageCode = "zh-tw"
+title = "Novis"
+theme = "PaperMod"
+
+enableRobotsTXT = true
+
+[params]
+  env = "production"
+  title = "Novis"
+  description = "Personal site"
+  defaultTheme = "auto"
+  ShowReadingTime = true
+  ShowPostNavLinks = true
+  ShowBreadCrumbs = true
+  ShowCodeCopyButtons = true
+  ShowWordCount = true
+
+[params.assets]
+  favicon = "/favicon.ico"
+  favicon16x16 = "/favicon-16x16.png"
+  favicon32x32 = "/favicon-32x32.png"
+  apple_touch_icon = "/apple-touch-icon.png"
+
+[params.homeInfoParams]
+  Title = "Novis"
+  Content = "Welcome."
+
+[[menu.main]]
+  identifier = "posts"
+  name = "Posts"
+  url = "/posts/"
+  weight = 10

@@ -18,6 +18,7 @@ secrets:
 
 ########################### INCLUDES
 include:
+  - compose/apps/hugo.yml
   - compose/apps/calibre-web-automated.yml
   - compose/apps/shelfmark.yml
   - compose/apps/home-assistant.yml

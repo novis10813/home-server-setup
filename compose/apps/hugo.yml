@@ -1,0 +1,63 @@
+# Hugo - Static site served at the root domain
+# Builder watches DATADIR content and writes static output for nginx.
+
+services:
+  ###########################################################################
+  # Hugo Builder
+  ###########################################################################
+  hugo-builder:
+    container_name: hugo-builder
+    build:
+      context: ${DOCKERDIR}/appdata/hugo/builder
+    image: local/hugo-builder:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - ${DOCKERDIR}/appdata/hugo/site:/src:ro
+      - ${DATADIR}/hugo/content:/src/content:ro
+      - ${DATADIR}/hugo/static:/src/static:ro
+      - ${DATADIR}/hugo/public:/public
+    environment:
+      - TZ=${TZ}
+      - HUGO_BASEURL=https://${DOMAINNAME_1}/
+      - HUGO_CACHEDIR=/tmp/hugo_cache
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+
+  ###########################################################################
+  # Hugo
+  ###########################################################################
+  hugo:
+    container_name: hugo
+    image: nginxinc/nginx-unprivileged:stable-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      - hugo-builder
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/hugo/public:/usr/share/nginx/html:ro
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.25"
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router
+      - "traefik.http.routers.hugo-rtr-http.entrypoints=web-internal,web-external"
+      - "traefik.http.routers.hugo-rtr-http.rule=Host(`${DOMAINNAME_1}`)"
+      - "traefik.http.routers.hugo-rtr-http.middlewares=chain-no-auth@file"
+      ## HTTPS Router
+      - "traefik.http.routers.hugo-rtr.entrypoints=websecure-internal,websecure-external"
+      - "traefik.http.routers.hugo-rtr.rule=Host(`${DOMAINNAME_1}`)"
+      - "traefik.http.routers.hugo-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.hugo-rtr.service=hugo-svc"
+      - "traefik.http.services.hugo-svc.loadbalancer.server.port=8080"

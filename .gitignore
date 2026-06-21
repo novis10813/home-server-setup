@@ -6,5 +6,5 @@ appdata/traefik/acme/acme.json
 appdata/couchdb/local.ini
 logs/
 # MkDocs 建置輸出
-site/
+/site/
 .antigravitycli/
