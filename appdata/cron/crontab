@@ -1,5 +1,5 @@
-# 每週一凌晨 04:00 重啟 minecraft 容器（週日深夜到週一凌晨）
-0 4 * * 1 wget --post-data="" -qO- http://socket-proxy:2375/containers/minecraft/restart
+# Minecraft server currently unused; restart schedule disabled.
+# 0 4 * * 1 wget --post-data="" -qO- http://socket-proxy:2375/containers/minecraft/restart
 
 # 每日 09:00 Asia/Taipei 啟動 Nautilus catalog builder（UTC 日結束後 1 小時）
 0 9 * * * wget --post-data="" -qO- http://socket-proxy:2375/containers/nautilus-catalog-builder/start

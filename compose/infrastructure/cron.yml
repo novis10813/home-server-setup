@@ -14,9 +14,20 @@ services:
       - socket-proxy
     networks:
       - socket_proxy
+    environment:
+      - TZ=${TZ:-UTC}
     volumes:
-      - ${DOCKERDIR}/appdata/cron/crontab:/etc/crontabs/root:ro
-    entrypoint: ["crond", "-f", "-d", "8"]
+      - /etc/localtime:/etc/localtime:ro
+      - /usr/share/zoneinfo:/usr/share/zoneinfo:ro
+      - ${DOCKERDIR}/appdata/cron/crontab:/config/crontab:ro
+    entrypoint:
+      - /bin/sh
+      - -c
+      - |
+        cp /config/crontab /etc/crontabs/root
+        chown root:root /etc/crontabs/root
+        chmod 600 /etc/crontabs/root
+        exec crond -f -d 8
     deploy:
       resources:
         limits:
