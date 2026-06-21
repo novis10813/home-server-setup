@@ -1,33 +1,34 @@
 baseURL = "https://novis.page/"
 languageCode = "zh-tw"
-title = "Novis"
+title = "The Gradient Step"
 theme = "PaperMod"
 
 enableRobotsTXT = true
 
 [params]
-  env = "production"
-  title = "Novis"
-  description = "Personal site"
-  defaultTheme = "auto"
-  ShowReadingTime = true
-  ShowPostNavLinks = true
-  ShowBreadCrumbs = true
-  ShowCodeCopyButtons = true
-  ShowWordCount = true
+env = "production"
+title = "The Gradient Step"
+description = "Personal site"
+defaultTheme = "auto"
+ShowReadingTime = true
+ShowPostNavLinks = true
+ShowBreadCrumbs = true
+showShareButtons = true
+ShowCodeCopyButtons = true
+ShowWordCount = true
 
 [params.assets]
-  favicon = "/favicon.ico"
-  favicon16x16 = "/favicon-16x16.png"
-  favicon32x32 = "/favicon-32x32.png"
-  apple_touch_icon = "/apple-touch-icon.png"
+favicon = "/favicon.ico"
+favicon16x16 = "/favicon-16x16.png"
+favicon32x32 = "/favicon-32x32.png"
+apple_touch_icon = "/apple-touch-icon.png"
 
 [params.homeInfoParams]
-  Title = "Novis"
-  Content = "Welcome."
+Title = "人生漸進式"
+Content = "每一小步 都是改變的一大步"
 
 [[menu.main]]
-  identifier = "posts"
-  name = "Posts"
-  url = "/posts/"
-  weight = 10
+identifier = "posts"
+name = "Posts"
+url = "/posts/"
+weight = 10
