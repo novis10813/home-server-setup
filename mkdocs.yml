@@ -44,6 +44,7 @@ nav:
   - App:
     - 概述: app/README.md
     - Hugo: app/hugo.md
+    - HugObsidian: app/hugobsidian.md
     - Home Assistant: app/home-assistant.md
     - Minecraft: app/minecraft.md
   - Media:

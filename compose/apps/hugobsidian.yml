@@ -1,0 +1,35 @@
+# HugObsidian - Obsidian QuickAdd receiver for Hugo content
+
+services:
+  hugobsidian:
+    container_name: hugobsidian
+    build:
+      context: /mnt/raid1/novis/home-stack/hugobsidian
+    image: local/hugobsidian:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - t3_proxy
+    env_file:
+      - ${DOCKERDIR}/secrets/hugobsidian.env
+    environment:
+      - TZ=${TZ}
+      - HUGOBSIDIAN_PUBLIC_BASE_URL=https://${DOMAINNAME_1}
+      - HUGOBSIDIAN_CONTENT_ROOT=/hugo/content
+      - HUGOBSIDIAN_DATA_ROOT=/data
+    volumes:
+      - ${DATADIR}/hugo/content:/hugo/content
+      - ${DATADIR}/hugobsidian:/data
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.hugobsidian-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.hugobsidian-rtr.rule=Host(`hugobsidian.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.hugobsidian-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.hugobsidian-rtr.service=hugobsidian-svc"
+      - "traefik.http.services.hugobsidian-svc.loadbalancer.server.port=8000"
