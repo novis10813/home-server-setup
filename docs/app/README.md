@@ -18,6 +18,7 @@
 | Immich | `immich.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `chain-immich@file`（使用 Immich 內建認證，僅套用安全標頭/限流） |
 | Kavita | `kavita.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | Kavita 內建登入 + `chain-no-auth-relaxed@file` |
 | Shelfmark | `shelfmark.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | CWA 帳號同步登入 + `chain-no-auth@file` |
+| WebDAV | `webdav.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | Traefik Basic Auth + `chain-basic-auth@file` |
 
 ### TLS 使用方式
 

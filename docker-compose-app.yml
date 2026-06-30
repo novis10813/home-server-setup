@@ -29,3 +29,4 @@ include:
   - compose/apps/portainer.yml
   - compose/apps/searxng.yml
   - compose/apps/couchdb.yml
+  - compose/apps/webdav.yml

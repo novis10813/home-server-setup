@@ -47,6 +47,7 @@ nav:
     - HugObsidian: app/hugobsidian.md
     - Home Assistant: app/home-assistant.md
     - Minecraft: app/minecraft.md
+    - WebDAV: app/webdav.md
   - Media:
     - 概述: media/README.md
   - Home stack:

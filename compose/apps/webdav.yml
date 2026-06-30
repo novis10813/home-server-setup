@@ -1,0 +1,43 @@
+# WebDAV - Zotero paper storage
+# https://rclone.org/commands/rclone_serve_webdav/
+
+services:
+  ###########################################################################
+  # WebDAV
+  ###########################################################################
+  webdav:
+    container_name: webdav
+    image: rclone/rclone:latest
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    user: "${PUID:-1000}:${PGID:-1000}"
+    command:
+      - serve
+      - webdav
+      - /data
+      - --addr
+      - :8080
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/webdav:/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    cap_drop:
+      - ALL
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+    labels:
+      - "traefik.enable=true"
+      ## HTTPS Router (internal only)
+      - "traefik.http.routers.webdav-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.webdav-rtr.rule=Host(`webdav.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.webdav-rtr.middlewares=chain-basic-auth@file"
+      ## Service
+      - "traefik.http.routers.webdav-rtr.service=webdav-svc"
+      - "traefik.http.services.webdav-svc.loadbalancer.server.port=8080"
