@@ -21,6 +21,7 @@ include:
   - compose/apps/hugo.yml
   - compose/apps/hugobsidian.yml
   - compose/apps/calibre-web-automated.yml
+  - compose/apps/code-server.yml
   - compose/apps/shelfmark.yml
   - compose/apps/home-assistant.yml
   - compose/apps/immich.yml

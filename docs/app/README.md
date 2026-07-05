@@ -12,6 +12,7 @@
 | 服務 | Host | 內網（Internal） | 外網（External） | 認證 |
 |------|------|------------------|------------------|------|
 | Calibre-Web-Automated | `calibre.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | CWA 內建登入 + `chain-no-auth@file` |
+| code-server | `code.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | Traefik OAuth + `chain-oauth@file` |
 | Home Assistant | `ha.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | HA 內建登入 + `chain-no-auth@file` |
 | Hugo | `${DOMAINNAME_1}` | ✅ `websecure-internal` | ✅ `websecure-external` | 公開靜態網站 + `chain-no-auth@file` |
 | HugObsidian | `hugobsidian.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `X-API-Key` + `chain-no-auth@file` |

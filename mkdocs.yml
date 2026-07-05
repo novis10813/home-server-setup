@@ -43,6 +43,7 @@ nav:
     - 操作與維護: infrastructure/operations.md
   - App:
     - 概述: app/README.md
+    - code-server: app/code-server.md
     - Hugo: app/hugo.md
     - HugObsidian: app/hugobsidian.md
     - Home Assistant: app/home-assistant.md
