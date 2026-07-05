@@ -6,13 +6,13 @@ groups:
     rules:
       ### 容器狀態告警
       - alert: ContainerKilled
-        expr: time() - container_last_seen > 60
+        expr: increase(container_oom_events_total{name!=""}[5m]) > 0
         for: 0m
         labels:
           severity: warning
         annotations:
           summary: "Container {{ $labels.name }} was killed"
-          description: "Container {{ $labels.name }} was killed or stopped more than 1 minute ago."
+          description: "Container {{ $labels.name }} had {{ printf \"%.0f\" $value }} OOM kill event(s) in the last 5 minutes."
 
       - alert: ContainerRestarting
         expr: increase(container_start_time_seconds[10m]) > 3
@@ -50,7 +50,7 @@ groups:
       ### 容器 Memory 告警
       - alert: ContainerHighMemory
         expr: |
-          (container_memory_usage_bytes{name!=""}
+          (container_memory_working_set_bytes{name!=""}
           / container_spec_memory_limit_bytes{name!=""} * 100 > 80)
           and container_spec_memory_limit_bytes{name!=""} > 0
         for: 5m
@@ -62,7 +62,7 @@ groups:
 
       - alert: ContainerMemoryCritical
         expr: |
-          (container_memory_usage_bytes{name!=""}
+          (container_memory_working_set_bytes{name!=""}
           / container_spec_memory_limit_bytes{name!=""} * 100 > 95)
           and container_spec_memory_limit_bytes{name!=""} > 0
         for: 2m
