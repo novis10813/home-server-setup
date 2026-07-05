@@ -39,7 +39,7 @@ services:
     security_opt:
       - no-new-privileges:true
     networks:
-      - homestack     # QuestDB (questdb:9000)；MinIO 走外網 HTTP
+      - homestack     # QuestDB (questdb:9000); MinIO (minio:9000)
     volumes:
       - /etc/localtime:/etc/localtime:ro
     env_file:
@@ -47,8 +47,10 @@ services:
     environment:
       - TZ=${TZ:-UTC}
       - EXPORT_QUESTDB_HOST=questdb
+      - EXPORT_MINIO_ENDPOINT=http://minio:9000
     depends_on:
       - questdb
+      - minio
     profiles:
       - export        # 只在 cron 觸發時用，平時不啟動
 

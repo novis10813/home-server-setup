@@ -13,9 +13,10 @@
 | 已建置 symbols | `BNBUSDT.BINANCE`, `BTCUSDT.BINANCE`, `ETHUSDT.BINANCE` |
 | 已建置 data types | `trade_tick`, `order_book_depths` |
 
-S3 endpoint 與 access key 請向部署端取得，或在主機上參考
-`${DOCKERDIR}/secrets/nautilus-catalog-builder.env`。不要把實際 secret 寫入
-repo。
+Docker 內部 builder 使用 `http://minio:9000`。本地或 LAN 回測程式請使用
+`https://s3.${DOMAINNAME_1}` 與 path-style request。Access key 請向部署端
+取得，或在主機上參考 `${DOCKERDIR}/secrets/nautilus-catalog-builder.env`。
+不要把實際 secret 寫入 repo。
 
 ## 最小本地專案
 
@@ -42,7 +43,7 @@ dependencies = [
 設定連線環境變數：
 
 ```bash
-export CATALOG_S3_ENDPOINT="http://<minio-host>:9000"
+export CATALOG_S3_ENDPOINT="https://s3.<domain>"
 export CATALOG_S3_ACCESS_KEY="<access-key>"
 export CATALOG_S3_SECRET_KEY="<secret-key>"
 export CATALOG_OUTPUT_S3_BUCKET="nautilus-data"
@@ -146,4 +147,5 @@ engine.add_data(depths)
 - `fs_rust_storage_options` 的 endpoint key 必須使用 `endpoint_url`，不要使用
   `aws_endpoint`。
 - 本範例只讀取已轉好的 catalog，不會觸發轉檔、不會寫入 S3，也不需要連
-  homestack 的 Docker network。
+  homestack 的 Docker network。若範例跑在 Homestack Docker network 內，
+  endpoint 改用 `http://minio:9000`。

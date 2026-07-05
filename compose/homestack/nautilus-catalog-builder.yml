@@ -22,7 +22,10 @@ services:
     environment:
       - PYTHONUNBUFFERED=1
       - TZ=${TZ:-UTC}
+      - CATALOG_S3_ENDPOINT=http://minio:9000
     command: ["build-closed-days"]
+    depends_on:
+      - minio
 
 networks:
   homestack:

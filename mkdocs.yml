@@ -54,6 +54,9 @@ nav:
   - Home stack:
     - 概述: homestack/README.md
     - NATS: homestack/nats.md
+    - MinIO: homestack/minio.md
+    - Redis: homestack/redis.md
+    - Nautilus catalog builder: homestack/nautilus-catalog-builder.md
 
 markdown_extensions:
   - pymdownx.superfences

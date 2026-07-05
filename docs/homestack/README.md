@@ -1,13 +1,13 @@
 # Home stack（自訂服務）
 
-**Home stack** 用 **`docker-compose-homestack.yml`** 管理本機開發或家用的自訂程式與基礎元件（與 Infrastructure、App、Media 分離），目前包含 NATS、QuestDB 與交易平台服務。
+**Home stack** 用 **`docker-compose-homestack.yml`** 管理本機開發或家用的自訂程式與基礎元件（與 Infrastructure、App、Media 分離），目前包含 NATS、Redis、MinIO、QuestDB 與交易平台服務。
 
 ## Compose 主檔
 
 | 項目 | 說明 |
 |------|------|
 | **檔案** | `docker-compose-homestack.yml` |
-| **Secrets** | 無（NATS 不使用認證，依賴 Docker 網路隔離） |
+| **Secrets** | `${DOCKERDIR}/secrets/minio.env` 與各服務 env 檔；NATS 不使用認證，依賴 Docker 網路隔離 |
 | **網路** | `t3_proxy`（external，與 Traefik 與其它已代理服務互通）、`homestack`（內部 bridge，供日後只給自訂服務使用） |
 
 ## 服務一覽
@@ -16,6 +16,7 @@
 |------|------|----------|
 | NATS | 訊息佇列與 JetStream；客戶端協定 **不**經 Traefik 暴露 | [NATS](nats.md) |
 | Redis | Ephemeral 15-minute Bookmap hot cache for `financial-dashboard` | [Redis](redis.md) |
+| MinIO | S3-compatible object storage；S3 API internal HTTPS，Console OAuth | [MinIO](minio.md) |
 | crypto-relay | Binance WebSocket → NATS 市場資料 relay | root repo `ROADMAP.md` |
 | financial-dashboard | `dash.${DOMAINNAME_1}` liquidity 與 recording policies UI | root repo `ROADMAP.md` |
 | market-data-recorder | SQLite 長期錄製政策 → QuestDB；admin API 僅供內網反代 | root repo `ROADMAP.md` |
@@ -34,6 +35,20 @@ docker compose -f docker-compose-homestack.yml down
 ```
 
 環境變數範例見根目錄 `.env.example`（`NATS_VERSION` 等）。
+
+## Homestack S3
+
+MinIO 資料放在 `${DATADIR}/minio`。Docker 內部服務使用
+`http://minio:9000`；LAN / human clients 使用
+`https://s3.${DOMAINNAME_1}`；Console 使用
+`https://minio.${DOMAINNAME_1}` 並套 `chain-oauth@file`。
+
+目前 Homestack 使用兩個 buckets：
+
+| Bucket | 用途 |
+|--------|------|
+| `market-data` | `market-data-archiver` raw Parquet archive |
+| `nautilus-data` | `nautilus-catalog-builder` Nautilus Trader catalog |
 
 ## Recorder 資料與管理 API
 
