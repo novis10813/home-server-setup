@@ -1,0 +1,53 @@
+# CLIProxyAPI - OpenAI/Gemini/Claude/Codex compatible API proxy
+# https://github.com/router-for-me/CLIProxyAPI
+
+services:
+  ###########################################################################
+  # CLIProxyAPI
+  ###########################################################################
+  cli-proxy-api:
+    container_name: cli-proxy-api
+    image: eceasy/cli-proxy-api:${CLIPROXYAPI_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    networks:
+      - t3_proxy
+    volumes:
+      - ${DATADIR}/cli-proxy-api/auths:/root/.cli-proxy-api
+      - ${DATADIR}/cli-proxy-api/logs:/CLIProxyAPI/logs
+      - ${DATADIR}/cli-proxy-api/plugins:/CLIProxyAPI/plugins
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+    secrets:
+      - source: cli_proxy_api_config
+        target: /CLIProxyAPI/config.yaml
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+    labels:
+      - "traefik.enable=true"
+      ## HTTPS Router (internal only)
+      - "traefik.http.routers.cli-proxy-api-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.cli-proxy-api-rtr.rule=Host(`cliproxy.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.cli-proxy-api-rtr.middlewares=chain-no-auth@file"
+      ## Service
+      - "traefik.http.routers.cli-proxy-api-rtr.service=cli-proxy-api-svc"
+      ## Management UI (internal only)
+      - "traefik.http.middlewares.cli-proxy-api-management-redirect.redirectregex.regex=^https://cliproxyapi\\.${DOMAINNAME_1}/$"
+      - "traefik.http.middlewares.cli-proxy-api-management-redirect.redirectregex.replacement=https://cliproxyapi.${DOMAINNAME_1}/management.html"
+      - "traefik.http.middlewares.cli-proxy-api-management-redirect.redirectregex.permanent=true"
+      - "traefik.http.routers.cli-proxy-api-management-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.cli-proxy-api-management-rtr.rule=Host(`cliproxyapi.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.cli-proxy-api-management-rtr.middlewares=cli-proxy-api-management-redirect,chain-oauth@file"
+      - "traefik.http.routers.cli-proxy-api-management-rtr.service=cli-proxy-api-svc"
+      - "traefik.http.services.cli-proxy-api-svc.loadbalancer.server.port=8317"
+
+networks:
+  t3_proxy:
+    external: true

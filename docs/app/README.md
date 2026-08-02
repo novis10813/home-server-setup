@@ -13,6 +13,7 @@
 |------|------|------------------|------------------|------|
 | Calibre-Web-Automated | `calibre.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | CWA 內建登入 + `chain-no-auth@file` |
 | code-server | `code.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | Traefik OAuth + `chain-oauth@file` |
+| CLIProxyAPI | `cliproxy.${DOMAINNAME_1}`（API）<br>`cliproxyapi.${DOMAINNAME_1}`（管理頁） | ✅ `websecure-internal` | ❌ | Traefik OAuth + API 或管理金鑰 |
 | Home Assistant | `ha.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | HA 內建登入 + `chain-no-auth@file` |
 | Hugo | `${DOMAINNAME_1}` | ✅ `websecure-internal` | ✅ `websecure-external` | 公開靜態網站 + `chain-no-auth@file` |
 | HugObsidian | `hugobsidian.${DOMAINNAME_1}` | ✅ `websecure-internal` | ❌ | `X-API-Key` + `chain-no-auth@file` |
