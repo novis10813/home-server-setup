@@ -1,6 +1,6 @@
 # Firecrawl - Self-hosted web scraping engine for Hermes Agent web_extract
 # https://github.com/mendableai/firecrawl
-# Minimal deployment: api + playwright-service + redis (sync /v1/scrape only)
+# Minimal deployment: api + playwright-service + redis + db + rabbitmq (sync /v1/scrape only)
 # No Traefik exposure - accessed by Hermes via ai_services internal network only.
 
 services:
@@ -18,17 +18,35 @@ services:
       firecrawl_internal: {}
     environment:
       - TZ=${TZ}
+      - HOST=0.0.0.0
       - PORT=3002
+      - NODE_OPTIONS=--dns-result-order=ipv4first
+      - NUM_WORKERS=1
+      - NUQ_WORKER_COUNT=1
       - REDIS_URL=redis://firecrawl-redis:6379
+      - REDIS_RATE_LIMIT_URL=redis://firecrawl-redis:6379
+      - REDIS_EVICT_URL=redis://firecrawl-redis:6379
+      - INDEX_CACHE_REDIS_URL=redis://firecrawl-redis:6379
       - PLAYWRIGHT_MICROSERVICE_URL=http://firecrawl-playwright:3000/scrape
+      - NUQ_DATABASE_URL=postgres://postgres:postgres@firecrawl-db:5432/postgres
+      - NUQ_RABBITMQ_URL=amqp://guest:guest@firecrawl-rabbitmq:5672
       # No DB authentication — service is internal to ai_services network only.
       - USE_DB_AUTHENTICATION=false
       # No FIRECRAWL_API_KEY required for self-hosted without authentication.
+    depends_on:
+      firecrawl-db:
+        condition: service_healthy
+      firecrawl-redis:
+        condition: service_healthy
+      firecrawl-rabbitmq:
+        condition: service_healthy
+      firecrawl-playwright:
+        condition: service_started
     deploy:
       resources:
         limits:
-          memory: ${FIRECRAWL_MEMORY_LIMIT:-1g}
-          cpus: "${FIRECRAWL_CPU_LIMIT:-1.0}"
+          memory: ${FIRECRAWL_MEMORY_LIMIT:-3g}
+          cpus: "${FIRECRAWL_CPU_LIMIT:-2.0}"
 
   ###########################################################################
   # Firecrawl Playwright Service (headless browser renderer)
@@ -66,17 +84,64 @@ services:
     command: ["redis-server", "--save", "", "--appendonly", "no"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 30s
+      interval: 10s
       timeout: 5s
-      retries: 3
+      retries: 5
     deploy:
       resources:
         limits:
           memory: ${FIRECRAWL_REDIS_MEMORY_LIMIT:-256m}
           cpus: "${FIRECRAWL_REDIS_CPU_LIMIT:-0.25}"
 
+  ###########################################################################
+  # Firecrawl Database (PostgreSQL for task queue / NUQ - internal only)
+  ###########################################################################
+  firecrawl-db:
+    container_name: firecrawl-db
+    image: ghcr.io/firecrawl/nuq-postgres:${FIRECRAWL_DB_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      firecrawl_internal: {}
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=postgres
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRECRAWL_DB_MEMORY_LIMIT:-512m}
+          cpus: "${FIRECRAWL_DB_CPU_LIMIT:-0.5}"
+
+  ###########################################################################
+  # Firecrawl RabbitMQ (Message broker for NUQ task queue - internal only)
+  ###########################################################################
+  firecrawl-rabbitmq:
+    container_name: firecrawl-rabbitmq
+    image: rabbitmq:3-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      firecrawl_internal: {}
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRECRAWL_RABBITMQ_MEMORY_LIMIT:-512m}
+          cpus: "${FIRECRAWL_RABBITMQ_CPU_LIMIT:-0.5}"
+
 networks:
   firecrawl_internal:
     name: firecrawl_internal
     driver: bridge
-    internal: true
