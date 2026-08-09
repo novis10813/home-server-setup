@@ -32,25 +32,26 @@ docker inspect searxng --format '{{.Name}} {{.Config.Labels}}' 2>/dev/null || tr
 
 ## 1. 固定 container name 的安全遷移
 
-以下順序假設 AI Compose 已經加入 `hermes`、`searxng`，且保留相同的固定 container name、資料掛載與 `t3_proxy` 網路。服務名稱仍須先被舊 App Compose 認得，才能安全停止：
+以下順序假設 AI Compose 已經加入 `hermes`、`searxng`，且保留相同的固定 container name、資料掛載與 `t3_proxy` 網路。合併後 App Compose 已不再包含這兩個 service，因此先從既有容器 labels 驗證舊 project，再以 `-p` 明確指定它；不要用 `docker stop` 猜測 ownership：
 
 ```bash
-# A. 舊 project 仍是服務定義的來源：先停止，不要 down
+# A. 驗證兩個既有容器都屬於預期的舊 project。
+old_project="$(docker inspect hermes --format '{{index .Config.Labels "com.docker.compose.project"}}')"
+test -n "${old_project}"
+test "$(docker inspect searxng --format '{{index .Config.Labels "com.docker.compose.project"}}')" = "${old_project}"
 
-docker compose -f docker-compose-app.yml stop hermes searxng
+# B. 使用 AI service 定義，但覆寫 project name 以鎖定舊容器；先停止，不要 down。
+docker compose -p "${old_project}" -f docker-compose-ai.yml stop hermes searxng
+docker inspect hermes searxng --format '{{.Name}} {{.State.Status}}'
 
-docker compose -f docker-compose-app.yml ps hermes searxng
+# C. 兩個容器都為 Exited 後，只移除容器物件；不要加 -v。
+docker compose -p "${old_project}" -f docker-compose-ai.yml rm -f hermes searxng
 
-# B. 確認兩個容器都是 Exited，再移除「容器物件」以釋放固定名稱。
-#    rm 不會移除 named volumes 或 bind-mounted DATADIR；不要加 -v。
-docker compose -f docker-compose-app.yml rm -f hermes searxng
-
-# C. 切換到 AI project 建立容器
-#    只有 docker-compose-ai.yml 已整合並通過 config --quiet 才可執行。
+# D. 由頂層 name: ai 的新 project 建立服務。
 docker compose -f docker-compose-ai.yml up -d hermes searxng
 ```
 
-如果 `stop` 顯示服務不存在，表示舊 project 已不再是安全的控制面：停止操作並先確認目前 container labels、project 名稱與遷移版本；不要用 `docker stop` 猜測其他容器。若 `up` 報告固定名稱仍被使用，先確認容器確實已停止，再以正確的舊 project 執行 `docker compose ... rm -f`；不要用全域 `docker rm`、`prune` 或刪除資料目錄。
+若 labels 不一致、project name 為空或容器狀態不是預期值，立即停止遷移。若 `up` 報告固定名稱仍被使用，先重新檢查 ownership 與狀態；不要用全域 `docker rm`、`prune` 或刪除資料目錄。
 
 遷移後確認 project ownership 與持久化路徑：
 
@@ -108,8 +109,17 @@ docker compose -f docker-compose-infrastructure.yml config --quiet
 docker compose -f docker-compose-app.yml config --quiet
 docker compose -f docker-compose-ai.yml config --quiet
 
-docker compose -f docker-compose-app.yml stop hermes searxng
-docker compose -f docker-compose-app.yml rm -f hermes searxng
+# Persist the sandbox data-plane network; the gateway resolved config overrides
+# a same-named terminal environment variable in the current Hermes release.
+docker exec hermes hermes config set \
+  terminal.docker_extra_args '["--network=ai_services"]'
+
+# If proxy.enabled is true, configure/start iron-proxy before execute_code.
+docker exec hermes hermes egress status
+# First setup only: docker exec hermes hermes egress setup --no-restart
+docker exec hermes hermes egress start
+
+# Follow section 1 to stop/remove the verified old project, then:
 docker compose -f docker-compose-ai.yml up -d hermes searxng
 ```
 
