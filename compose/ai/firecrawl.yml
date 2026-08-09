@@ -9,7 +9,7 @@ services:
   ###########################################################################
   firecrawl:
     container_name: firecrawl
-    image: ghcr.io/mendableai/firecrawl:${FIRECRAWL_VERSION:-latest}
+    image: ghcr.io/firecrawl/firecrawl:${FIRECRAWL_VERSION:-latest}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
@@ -35,7 +35,7 @@ services:
   ###########################################################################
   firecrawl-playwright:
     container_name: firecrawl-playwright
-    image: ghcr.io/mendableai/playwright-service:${FIRECRAWL_PLAYWRIGHT_VERSION:-latest}
+    image: ghcr.io/firecrawl/playwright-service:${FIRECRAWL_PLAYWRIGHT_VERSION:-latest}
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
