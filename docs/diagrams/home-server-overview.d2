@@ -83,10 +83,6 @@ host: Home Server Docker Host {
       class: service
       icon: https://cdn.jsdelivr.net/npm/simple-icons@15/icons/portainer.svg
     }
-    search: SearXNG {
-      class: service
-      icon: https://cdn.jsdelivr.net/npm/simple-icons@15/icons/searxng.svg
-    }
     books: Calibre / Kavita / Shelfmark {
       class: service
     }
@@ -96,6 +92,25 @@ host: Home Server Docker Host {
     }
     minecraft: Minecraft {
       class: service
+    }
+  }
+
+  ai: AI stack {
+    class: zone
+
+    hermes: Hermes Agent {
+      class: service
+    }
+    sandbox: Hermes sandbox {
+      class: service
+    }
+    search: SearXNG {
+      class: service
+      icon: https://cdn.jsdelivr.net/npm/simple-icons@15/icons/searxng.svg
+    }
+    hermesproxy: Hermes Socket Proxy {
+      class: service
+      icon: https://cdn.jsdelivr.net/npm/simple-icons@15/icons/docker.svg
     }
   }
 
@@ -187,6 +202,14 @@ socketnet: "socket_proxy\n192.168.91.0/24" {
   class: network
 }
 
+ai_services: "ai_services\nbridge with egress" {
+  class: network
+}
+
+ai_control: "ai_control\ninternal" {
+  class: network
+}
+
 homestacknet: "homestack\nbridge" {
   class: network
 }
@@ -201,13 +224,21 @@ host.edge.traefik -> host.edge.oauth: forwardAuth
 host.edge.traefik -> host.edge.socket: Docker discovery
 
 t3 -> host.apps
+t3 -> host.ai.hermes
+t3 -> host.ai.search
 t3 -> host.media
 t3 -> host.homestack
 t3 -> host.monitoring
 socketnet -> host.edge.socket
+ai_services -> host.ai.hermes
+ai_services -> host.ai.sandbox
+ai_services -> host.ai.search
+ai_control -> host.ai.hermes
+ai_control -> host.ai.hermesproxy
 homestacknet -> host.homestack
 
 host.apps -> host.storage.datadir
+host.ai -> host.storage.datadir: ${DATADIR}/hermes host-visible workspace/output
 host.media -> host.storage.datadir
 host.homestack -> host.storage.datadir
 host.edge -> host.storage.appdata
