@@ -17,13 +17,14 @@
 
 ### 設計邏輯
 
-1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure`、`app`、`media`、`homestack` 等）
-2. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
-3. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
-4. **配置與資料分離**：
+1. **職責分離**：依服務類型劃分 Compose 檔案（`infrastructure`、`app`、`media`、`homestack`、`ai` 等）
+2. **AI 平面分離**：AI stack 使用 `t3_proxy`（Traefik 路由）、`ai_services`（AI service / sandbox data plane）與 `ai_control`（Hermes / proxy control plane）區分流量與權限
+3. **安全優先**：Socket Proxy 隔離 Docker API；所有容器啟用 `no-new-privileges`
+4. **環境變數驅動**：敏感設定與可變參數皆透過 `.env` 與 Docker Secrets 管理
+5. **配置與資料分離**：
    - `${DOCKERDIR}/appdata/` — 手寫設定檔（版控追蹤）
    - `${DATADIR}/` — 容器運行時資料（不版控，如資料庫、快取）
-5. **參考來源**：架構參考 [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)
+6. **參考來源**：架構參考 [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)
 
 ## 目錄結構
 
@@ -33,6 +34,7 @@
 ├── docker-compose-app.yml             # App 入口 Compose（include 子檔案）
 ├── docker-compose-media.yml           # Media 入口 Compose（可選）
 ├── docker-compose-homestack.yml       # 自訂服務 / NATS（Home stack）
+├── docker-compose-ai.yml               # AI stack 入口（data / control planes；由 AI unit 提供）
 ├── .env.example                        # 環境變數範本（複製為 .env 使用）
 ├── .env                                # 本機環境變數（勿提交）
 ├── mkdocs.yml                          # MkDocs 導航與主題設定
@@ -42,7 +44,8 @@
 │   ├── infrastructure/                # Infrastructure 類說明（架構、設定、服務、Traefik 規則、操作）
 │   ├── app/                            # App 類說明
 │   ├── media/                          # Media 類說明
-│   └── homestack/                      # Home stack（自訂服務、NATS）
+│   ├── homestack/                      # Home stack（自訂服務、NATS）
+│   └── ai/                             # AI stack（data / control plane 文件，入口檔加入後建立）
 ├── compose/
 │   ├── infrastructure/
 │   │   ├── traefik.yml                 # Traefik 反向代理服務定義
@@ -56,8 +59,9 @@
 │   │   └── cadvisor.yml                # 容器指標（profile: monitor）
 │   ├── apps/
 │   │   └── immich.yml                 # Immich（App）
-│   └── homestack/
-│       └── nats.yml                    # NATS（Home stack）
+│   ├── homestack/
+│   │   └── nats.yml                    # NATS（Home stack）
+│   └── ai/                             # AI service / control plane 定義
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
@@ -112,14 +116,29 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 
 | 網路名稱 | 子網 | 用途 |
 |---------|------|------|
-| `t3_proxy` | `192.168.90.0/24` | Traefik 與後端服務通訊 |
+| `t3_proxy` | `192.168.90.0/24` | Traefik 路由與後端服務通訊（含 AI 對外入口） |
 | `socket_proxy` | `192.168.91.0/24` | Traefik 與 Socket Proxy 通訊 |
+| `ai_services` | AI stack 定義 | AI service / sandbox data plane；僅連接必要的資料面服務 |
+| `ai_control` | AI stack 定義 | Hermes / proxy control plane；控制流與高權限 daemon/API 通道 |
 
 ### 埠對應
 
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
 - `${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，建議僅內網或以防火牆限制）
+
+## AI stack 協作規範
+
+AI stack 使用獨立的 `docker-compose-ai.yml`。常用命令如下（入口檔加入後執行）：
+
+```bash
+docker compose -f docker-compose-ai.yml config --quiet
+docker compose -f docker-compose-ai.yml up -d
+docker compose -f docker-compose-ai.yml logs -f
+docker compose -f docker-compose-ai.yml down
+```
+
+AI 服務需清楚標示 data plane 或 control plane。`t3_proxy` 是 Traefik 的路由網路；`ai_services` 是 AI service / sandbox data plane；`ai_control` 是 Hermes / proxy control plane。不要把網路連通性誤寫成安全隔離：stock Socket Proxy 只是 Docker API route gate，不是完整 sandbox boundary。Hermes 若共用 host daemon，仍屬高權限控制面，即使經過 Socket Proxy 也不能視為低權限執行。
 
 ## 程式碼風格指南
 
@@ -162,12 +181,15 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 
 1. [ ] 設定 `no-new-privileges:true`
 2. [ ] 使用 `restart: unless-stopped`
-3. [ ] 加入適當網路（通常是 `t3_proxy`）
-4. [ ] 設定正確的 Traefik labels
-5. [ ] 使用 middleware chain 保護端點
-6. [ ] 敏感資料使用 Secrets 或環境變數
-7. [ ] 運行時資料掛載到 `${DATADIR}/service-name/`（不使用 `appdata/`）
-8. [ ] 設定資源限制（供 Prometheus/cAdvisor 監控）：
+3. [ ] 加入適當網路（App 通常是 `t3_proxy`；AI 服務須明確選擇 `t3_proxy`、`ai_services` 或 `ai_control`）
+4. [ ] 設定正確的 Traefik labels；只對需要暴露的端點接入 `t3_proxy`
+5. [ ] 使用 middleware chain 保護端點，並在文件中標示 API key、OAuth 或內建認證
+6. [ ] 敏感資料使用 Secrets 或環境變數，不把 credentials、API keys 或 token 寫入 Compose / 文件
+7. [ ] 運行時資料掛載到 `${DATADIR}/service-name/`（不使用 `appdata/`），並記錄 data plane / control plane 的資料邊界
+8. [ ] AI 服務：說明是否需要 `ai_services` 或 `ai_control`，列出跨平面連線與最小必要權限
+9. [ ] AI 服務：若使用 Socket Proxy 或 host daemon，明確記載它只是 API route gate，並標示 Hermes / control plane 的實際高權限
+10. [ ] 新增服務文件：補上架構、網路、資料掛載、認證、權限、備份與操作命令，並更新對應 Compose taxonomy
+11. [ ] 設定資源限制（供 Prometheus/cAdvisor 監控）：
    ```yaml
    deploy:
      resources:

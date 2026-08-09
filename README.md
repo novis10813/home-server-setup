@@ -16,6 +16,9 @@
 | `docker-compose-app.yml` | 應用（App） | Immich、Home Assistant、Minecraft 等（見 `compose/apps/`） |
 | `docker-compose-media.yml` | 媒體（Media） | Jellyfin、*arr、qBittorrent 等 |
 | `docker-compose-homestack.yml` | 自訂（Home stack） | NATS / JetStream 與其它自訂程式（見 `compose/homestack/`） |
+| `docker-compose-ai.yml` | AI stack | AI 服務與 sandbox data plane，以及 Hermes / proxy control plane（獨立於 App） |
+
+AI stack 使用獨立的 Compose 邊界：`t3_proxy` 供 Traefik 對外路由，`ai_services` 承載 AI 服務與 sandbox 資料面，`ai_control` 承載 Hermes 與 proxy 控制面。該入口檔由 AI stack unit 提供；在入口檔尚未加入前，不要以缺少 `docker-compose-ai.yml` 判定既有 stack 失敗。
 
 若再新增類型，可補上對應 Compose 主檔並更新此表。
 
@@ -57,9 +60,39 @@ docker compose -f docker-compose-infrastructure.yml down
 
 Dashboard：`https://traefik.<DOMAINNAME_1>`（OAuth 保護、僅內網）。對外埠：80/81（HTTP）、443/444（HTTPS）、`TRAEFIK_PORT`（Traefik API；若啟用 insecure，務必以防火牆限制僅內網）。
 
+> **安全邊界**：stock Socket Proxy 是 Docker API route gate，只限制哪些 API route 可被呼叫，不是完整的 sandbox boundary。若 Hermes 共用 host daemon（例如透過 Docker socket 或等效控制通道），Hermes 仍具有高權限；必須把它視為 control plane，不可宣稱為隔離的低權限 sandbox。
+
 監控服務：
 - **Prometheus**：`https://prometheus.<DOMAINNAME_1>`（僅內網，OAuth 保護）
 - **Grafana**：`https://grafana.<DOMAINNAME_1>`（OAuth 保護）
+
+---
+
+## AI stack：服務與控制平面
+
+AI stack 對應獨立的 **`docker-compose-ai.yml`**（由 AI stack unit 提供），不要再把 Hermes 或 SearXNG 當作 App 服務清單的一部分。其職責分為：
+
+- **`t3_proxy`（Traefik）** — 對內路由、TLS、OAuth 與服務發現；只負責網關，不等於 sandbox。
+- **`ai_services`（AI service / sandbox data plane）** — AI runtime、工具服務與 sandbox 需要的資料面；應以最小網路與檔案權限執行。
+- **`ai_control`（Hermes / proxy control plane）** — Hermes agent、模型 proxy 與控制流；控制面可接觸的 daemon 或 API 必須明確列出並視為高權限邊界。
+
+常用指令（`docker-compose-ai.yml` 加入後使用）：
+
+```bash
+# 驗證 AI stack 設定
+docker compose -f docker-compose-ai.yml config --quiet
+
+# 啟動 AI stack
+docker compose -f docker-compose-ai.yml up -d
+
+# 檢視 AI stack 日誌
+docker compose -f docker-compose-ai.yml logs -f
+
+# 停止 AI stack
+docker compose -f docker-compose-ai.yml down
+```
+
+新增 AI 服務前，請完成 `AGENTS.md` 的安全與文件 checklist，並在服務說明中標示它屬於 data plane 或 control plane、需要的網路、資料掛載、認證方式及實際權限。
 
 ---
 
@@ -71,6 +104,7 @@ Dashboard：`https://traefik.<DOMAINNAME_1>`（OAuth 保護、僅內網）。對
 - **App** — 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich、Home Assistant）
 - **Media** — 媒體服務（`docker-compose-media.yml`）
 - **Home stack** — 自訂服務與 NATS（`docker-compose-homestack.yml`，詳見 `docs/homestack/`）
+- **AI stack** — AI services/sandbox data plane 與 Hermes/proxy control plane（`docker-compose-ai.yml`；入口檔加入後補上對應 `docs/ai/` 文件）
 
 以 [MkDocs](https://www.mkdocs.org/) + Material 主題建置成網頁後，左側導航即為上述層級。建置方式：
 
@@ -91,6 +125,7 @@ mkdocs build    # 輸出至 site/
 - `compose/apps/` — App 類服務定義（例如 `immich.yml`）
 - `compose/media/` — Media 類服務定義
 - `compose/homestack/` — Home stack（例如 `nats.yml`）
+- `compose/ai/` — AI stack 的 data plane 與 control plane 服務定義（入口檔加入後使用）
 - `appdata/traefik/` — Traefik 動態規則、ACME 憑證
 - `appdata/prometheus/` — Prometheus 設定檔
 - `appdata/nats/` — NATS 主設定檔（`nats-server.conf`）
