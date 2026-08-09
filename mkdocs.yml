@@ -44,13 +44,15 @@ nav:
   - App:
     - 概述: app/README.md
     - CLIProxyAPI: app/cliproxyapi.md
-    - Hermes Agent: app/hermes.md
     - code-server: app/code-server.md
     - Hugo: app/hugo.md
     - HugObsidian: app/hugobsidian.md
     - Home Assistant: app/home-assistant.md
     - Minecraft: app/minecraft.md
     - WebDAV: app/webdav.md
+  - AI:
+    - 概述: ai/README.md
+    - Hermes Agent: ai/hermes.md
   - Media:
     - 概述: media/README.md
   - Home stack:
