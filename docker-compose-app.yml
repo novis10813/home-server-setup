@@ -33,4 +33,5 @@ include:
   - compose/apps/searxng.yml
   - compose/apps/couchdb.yml
   - compose/apps/cliproxyapi.yml
+  - compose/apps/hermes.yml
   - compose/apps/webdav.yml

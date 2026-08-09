@@ -1,0 +1,51 @@
+# Hermes Agent - persistent self-hosted AI agent
+# https://github.com/NousResearch/hermes-agent
+
+services:
+  ###########################################################################
+  # Hermes Agent
+  ###########################################################################
+  hermes:
+    container_name: hermes
+    image: nousresearch/hermes-agent:${HERMES_VERSION:-latest}
+    restart: unless-stopped
+    command: gateway run
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      t3_proxy: {}
+    volumes:
+      - ${DATADIR}/hermes:/opt/data
+      - /etc/localtime:/etc/localtime:ro
+    environment:
+      - TZ=${TZ}
+      - PUID=${PUID:-1000}
+      - PGID=${PGID:-1000}
+      - API_SERVER_ENABLED=true
+      - API_SERVER_HOST=0.0.0.0
+      - HERMES_DASHBOARD=1
+      - HERMES_DASHBOARD_HOST=0.0.0.0
+      - HERMES_DASHBOARD_PORT=9119
+    deploy:
+      resources:
+        limits:
+          memory: ${HERMES_MEMORY_LIMIT:-4g}
+          cpus: "${HERMES_CPU_LIMIT:-2.0}"
+    labels:
+      - "traefik.enable=true"
+      ## OpenAI-compatible API (API_SERVER_KEY required)
+      - "traefik.http.routers.hermes-api-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.hermes-api-rtr.rule=Host(`hermes-api.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.hermes-api-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.hermes-api-rtr.service=hermes-api-svc"
+      - "traefik.http.services.hermes-api-svc.loadbalancer.server.port=8642"
+      ## Dashboard (Hermes authentication plus Traefik OAuth)
+      - "traefik.http.routers.hermes-dashboard-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.hermes-dashboard-rtr.rule=Host(`hermes.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.hermes-dashboard-rtr.middlewares=chain-oauth@file"
+      - "traefik.http.routers.hermes-dashboard-rtr.service=hermes-dashboard-svc"
+      - "traefik.http.services.hermes-dashboard-svc.loadbalancer.server.port=9119"
+
+networks:
+  t3_proxy:
+    external: true
