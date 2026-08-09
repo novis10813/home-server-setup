@@ -30,8 +30,6 @@ include:
   - compose/apps/kavita.yml
   - compose/apps/minecraft.yml
   - compose/apps/portainer.yml
-  - compose/apps/searxng.yml
   - compose/apps/couchdb.yml
   - compose/apps/cliproxyapi.yml
-  - compose/apps/hermes.yml
   - compose/apps/webdav.yml

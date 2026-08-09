@@ -14,13 +14,20 @@ services:
       - no-new-privileges:true
     networks:
       t3_proxy: {}
+      ai_services: {}
+      ai_control: {}
     volumes:
       - ${DATADIR}/hermes:/opt/data
+      # Keep the sandbox root identical inside Hermes and on the host daemon.
+      - ${DATADIR}/hermes:${DATADIR}/hermes
       - /etc/localtime:/etc/localtime:ro
     environment:
       - TZ=${TZ}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
+      - DOCKER_HOST=tcp://hermes-socket-proxy:2375
+      - TERMINAL_SANDBOX_DIR=${DATADIR}/hermes
+      - 'TERMINAL_DOCKER_EXTRA_ARGS=["--network=ai_services"]'
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - HERMES_DASHBOARD=1
@@ -45,7 +52,3 @@ services:
       - "traefik.http.routers.hermes-dashboard-rtr.middlewares=chain-oauth@file"
       - "traefik.http.routers.hermes-dashboard-rtr.service=hermes-dashboard-svc"
       - "traefik.http.services.hermes-dashboard-svc.loadbalancer.server.port=9119"
-
-networks:
-  t3_proxy:
-    external: true
