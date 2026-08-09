@@ -18,6 +18,6 @@ networks:
 
 ########################### INCLUDES
 include:
-  - compose/apps/hermes.yml
-  - compose/apps/searxng.yml
-  - compose/apps/hermes-socket-proxy.yml
+  - compose/ai/hermes.yml
+  - compose/ai/searxng.yml
+  - compose/ai/hermes-socket-proxy.yml
