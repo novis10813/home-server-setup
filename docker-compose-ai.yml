@@ -1,6 +1,8 @@
 # AI stack: Hermes agent, SearXNG, and the dedicated Docker API proxy
 # Usage: docker compose -f docker-compose-ai.yml up -d
 
+name: ai
+
 ########################### NETWORKS
 networks:
   t3_proxy:
