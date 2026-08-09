@@ -10,6 +10,9 @@ services:
     image: nousresearch/hermes-agent:${HERMES_VERSION:-latest}
     restart: unless-stopped
     command: gateway run
+    post_start:
+      # Configure the containerized listener and restart an existing proxy setup.
+      - command: /bin/sh /usr/local/bin/hermes-post-start
     security_opt:
       - no-new-privileges:true
     networks:
@@ -20,7 +23,12 @@ services:
       - ${DATADIR}/hermes:/opt/data
       # Keep the sandbox root identical inside Hermes and on the host daemon.
       - ${DATADIR}/hermes:${DATADIR}/hermes
+      - ${DOCKERDIR}/compose/scripts/hermes-post-start.sh:/usr/local/bin/hermes-post-start:ro
       - /etc/localtime:/etc/localtime:ro
+    # Bind only on host docker0 so default-bridge sandboxes can reach iron-proxy.
+    ports:
+      - "${HERMES_EGRESS_BIND_IP:-172.17.0.1}:9090:9090"
+      - "${HERMES_EGRESS_BIND_IP:-172.17.0.1}:9091:9091"
     environment:
       - TZ=${TZ}
       - PUID=${PUID:-1000}
@@ -30,6 +38,7 @@ services:
       - HERMES_WRITE_SAFE_ROOT=${DATADIR}/hermes
       - DOCKER_HOST=tcp://hermes-socket-proxy:2375
       - TERMINAL_SANDBOX_DIR=${DATADIR}/hermes
+      - SEARXNG_URL=http://searxng:8080
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - HERMES_DASHBOARD=1

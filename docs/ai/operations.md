@@ -1,8 +1,8 @@
 # AI stack 遷移與維運 Runbook
 
-本 runbook 描述把 Hermes 與 SearXNG 從既有 App Compose project 遷移到獨立 AI Compose project 的安全流程。本文只記錄可重複執行的操作；不會停止、重建或刪除目前運行中的服務。
+本 runbook 描述把 Hermes 與 SearXNG 從既有 App Compose project 遷移到獨立 AI Compose project 的安全流程，以及遷移完成後的日常維運與驗證方式。所有命令都應在受控維護時段執行，並先確認目前的 Compose ownership 與容器狀態。
 
-> **目前狀態**：本分支尚未有 `docker-compose-ai.yml`。以下 AI project 命令是整合該檔案後才可執行的 recipe；不要在檔案不存在時以猜測的 Compose 檔案取代它。整合後，先執行本文所有 `config --quiet` 檢查，再進行遷移。
+> **目前狀態**：repository 已提供頂層 `name: ai` 的 `docker-compose-ai.yml`，而 `docker-compose-app.yml` 已不再包含 Hermes 或 SearXNG。進行任何重建前，先執行本文所有 `config --quiet` 檢查。
 
 ## 不可違反的原則
 
@@ -67,16 +67,18 @@ docker inspect searxng --format '{{json .NetworkSettings.Networks}}'
 
 ## 2. Rollback
 
-若 AI project `up`、smoke test 或 network 檢查失敗，保留資料並按反向順序回復。先停止 AI project，再移除 AI project 建立的容器；接著讓舊 App Compose 重新建立服務：
+若 AI project `up`、smoke test 或 network 檢查失敗，保留資料並按反向順序回復。由於目前的 App Compose 已沒有這兩個 service，不能再用它重建 Hermes 或 SearXNG。短期 ownership rollback 可用相同、已驗證的 AI service 定義，明確覆寫成舊 project name：
 
 ```bash
+old_project=docker  # 必須替換成遷移前記錄並驗證過的 project name
+
 docker compose -f docker-compose-ai.yml stop hermes searxng
 docker compose -f docker-compose-ai.yml rm -f hermes searxng
-docker compose -f docker-compose-app.yml up -d hermes searxng
-docker compose -f docker-compose-app.yml ps hermes searxng
+docker compose -p "${old_project}" -f docker-compose-ai.yml up -d hermes searxng
+docker compose -p "${old_project}" -f docker-compose-ai.yml ps hermes searxng
 ```
 
-Rollback 不使用 `down -v` 或 prune，也不刪除 `${DATADIR}/hermes`、SearXNG `appdata` 或任何 Docker volume。若 rollback 仍失敗，保留容器與 logs 供調查，記錄 `docker compose ... config --quiet`、`ps`、network membership 與 image digest；不要反覆 `up` 造成未驗證的重建。
+這只回復 Compose ownership，不會把服務定義還原成歷史版本。若必須完整回復舊 App 架構，應從已知良好的 pre-migration Git revision 取回當時的 Compose 定義，先執行 `config --quiet` 並審查 diff，再重建服務。Rollback 不使用 `down -v` 或 prune，也不刪除 `${DATADIR}/hermes`、SearXNG `appdata` 或任何 Docker volume。若 rollback 仍失敗，保留容器與 logs 供調查；不要反覆 `up` 造成未驗證的重建。
 
 ## 3. 日常維運命令
 
@@ -100,7 +102,7 @@ docker compose -f docker-compose-ai.yml up -d hermes searxng
 
 ## 4. 整合後完整 runtime E2E recipe
 
-以下步驟是遷移完成後由維運者在受控時段執行的驗證清單。這裡只給命令語法；本 work unit 不會在 worktree 連線到 live host 執行它們。
+以下步驟是遷移完成後由維運者在受控時段執行的驗證清單。命令不得輸出 `.env`、proxy token 或 provider credential。
 
 ### 4.1 Compose、停止舊 App、啟動 AI
 
@@ -109,15 +111,14 @@ docker compose -f docker-compose-infrastructure.yml config --quiet
 docker compose -f docker-compose-app.yml config --quiet
 docker compose -f docker-compose-ai.yml config --quiet
 
-# Persist the sandbox data-plane network; the gateway resolved config overrides
-# a same-named terminal environment variable in the current Hermes release.
-docker exec hermes hermes config set \
-  terminal.docker_extra_args '["--network=ai_services"]'
-
-# If proxy.enabled is true, configure/start iron-proxy before execute_code.
+# If proxy.enabled is true, perform the one-time setup before execute_code.
+# Compose post_start rewrites only the listener fields for the containerized
+# deployment and restarts an already-configured proxy after recreation.
 docker exec hermes hermes egress status
 # First setup only: docker exec hermes hermes egress setup --no-restart
-docker exec hermes hermes egress start
+
+# Verify the host docker0 address used by HERMES_EGRESS_BIND_IP.
+ip -4 -o addr show docker0
 
 # Follow section 1 to stop/remove the verified old project, then:
 docker compose -f docker-compose-ai.yml up -d hermes searxng
@@ -131,7 +132,7 @@ docker inspect hermes --format 'networks={{json .NetworkSettings.Networks}} priv
 docker inspect searxng --format 'networks={{json .NetworkSettings.Networks}} privileged={{.HostConfig.Privileged}} binds={{json .HostConfig.Binds}}'
 ```
 
-檢查結果必須確認：Hermes 和 SearXNG 都在 `t3_proxy`；`Privileged` 為 `false`；沒有未審查的 host bind；Hermes workspace/output bind 只落在預期的專用路徑。若 AI Compose 使用 sandbox network，另外檢查 sandbox container 的 network、`Privileged=false`、bind 清單與 output mount，不要只看主服務的 network。
+檢查結果必須確認：Hermes 和 SearXNG 都在 `t3_proxy`；`Privileged` 為 `false`；沒有未審查的 host bind；Hermes workspace/output bind 只落在預期的專用路徑。目前 Hermes 的 enforced iron-proxy 會拒絕可覆寫 egress 邊界的 `--network` extra arg，因此 sandbox 保持 Docker 預設 `bridge`，而不是加入 `ai_services`。另外檢查 sandbox 的 `Privileged=false`、空白 host PID mode、無 devices、預期 capability 與 bind 清單；不要只看主服務的 network。
 
 ### 4.3 SearXNG internal HTTP
 
@@ -153,7 +154,12 @@ AI Compose 的 Hermes backend 必須明確設定預期的 `DOCKER_HOST`（例如
 ```bash
 docker exec hermes sh -lc \
   'test -n "$DOCKER_HOST" && printf "DOCKER_HOST=%s\\n" "$DOCKER_HOST" && docker version'
+
+docker exec hermes hermes egress status
+ss -lnt | grep -E "${HERMES_EGRESS_BIND_IP:-172.17.0.1}:909[01]"
 ```
+
+`egress status` 必須顯示 process running、listening 與 Docker enforcement enabled。Compose 只把 9090/9091 綁在 host `docker0` 位址，不能改成 `0.0.0.0` 或 LAN IP；這兩個 port 不應透過 Traefik 或 firewall 對 LAN/WAN 開放。
 
 接著用 Hermes CLI 的 `-z` 強制走 `execute_code`，並只寫入專用的 host-visible output 目錄：
 
