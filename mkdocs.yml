@@ -53,6 +53,9 @@ nav:
   - AI:
     - 概述: ai/README.md
     - Hermes Agent: ai/hermes.md
+    - SearXNG: ai/searxng.md
+    - 操作與維護: ai/operations.md
+    - 安全邊界: ai/security.md
   - Media:
     - 概述: media/README.md
   - Home stack:
