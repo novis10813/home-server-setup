@@ -62,6 +62,9 @@
 │   ├── homestack/
 │   │   └── nats.yml                    # NATS（Home stack）
 │   └── ai/                             # AI service / control plane 定義
+│       ├── hermes.yml                 # Hermes Agent
+│       ├── searxng.yml                # SearXNG 搜尋引擎
+│       └── hermes-socket-proxy.yml    # Hermes 專用 Docker API 安全代理
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
