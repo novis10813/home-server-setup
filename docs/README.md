@@ -6,7 +6,7 @@
 
 ## 文件索引
 
-依 **Compose 職責** 分層，左側導航為：Infrastructure、App、…；點入可看該類的詳細設定。
+依 **Compose 職責** 分層，左側導航為：Infrastructure、App、Media、Home stack；AI stack 另以獨立 `docker-compose-ai.yml` 管理，待入口檔與 `docs/ai/` 文件加入後再納入導航。點入各區塊可看該類的詳細設定。
 
 | 區塊 | 說明 |
 |------|------|
@@ -14,6 +14,7 @@
 | [App](app/README.md) | 應用類服務（以 `docker-compose-app.yml` 管理，例如 Immich） |
 | [Media](media/README.md) | 媒體服務（Jellyfin + Sonarr/Radarr/Prowlarr/qBittorrent） |
 | [Home stack](homestack/README.md) | 自訂服務（`docker-compose-homestack.yml`，含 NATS / JetStream） |
+| AI stack（文件待補） | 獨立的 AI service / sandbox data plane 與 Hermes / proxy control plane（`docker-compose-ai.yml`） |
 
 ---
 
@@ -29,6 +30,8 @@
 - **Media Compose**：`docker compose -f docker-compose-media.yml up -d`
 - **Jellyfin**：`https://jellyfin.<DOMAINNAME_1>`（僅內網）
 - **Home stack Compose**：`docker compose -f docker-compose-homestack.yml up -d`
+- **AI stack 設定驗證**：`docker compose -f docker-compose-ai.yml config --quiet`（入口檔加入後執行）
+- **AI stack 啟動**：`docker compose -f docker-compose-ai.yml up -d`（入口檔加入後執行）
 - **NATS 監控（HTTP）**：`https://nats.<DOMAINNAME_1>`（僅內網；客戶端協定 4222 見 [NATS 說明](homestack/nats.md)）
 - **設定檔**：`appdata/traefik/rules/`、`appdata/traefik/acme/`、`appdata/prometheus/`、`appdata/nats/`
 - **敏感檔**：`secrets/`、`.env`（勿提交版控）

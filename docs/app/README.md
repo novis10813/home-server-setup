@@ -1,6 +1,6 @@
 # App
 
-本專案的 **App** 類服務使用 `docker-compose-app.yml` 管理（與 Infrastructure 分離），並透過外部網路 `t3_proxy` 交由 Traefik 反向代理。
+本專案的 **App** 類服務使用 `docker-compose-app.yml` 管理（與 Infrastructure 分離），並透過外部網路 `t3_proxy` 交由 Traefik 反向代理。AI stack 為獨立職責：Hermes 與 SearXNG 不屬於本 App 服務清單，應由獨立的 `docker-compose-ai.yml` 管理。
 
 ## Compose 主檔
 
@@ -26,3 +26,8 @@
 
 - TLS 由 Traefik 的 `websecure-*` entrypoints 統一提供（憑證與 TLS options 皆在 Traefik 設定）。
 - App 服務的 router labels 一般不需要重複設定 `tls=true` / `tls.certresolver`，除非該服務需要不同的 TLS 行為。
+
+### 職責邊界
+
+- App 服務可使用 `t3_proxy` 接入 Traefik，但不得藉此宣稱具備 AI sandbox 隔離。
+- Hermes、SearXNG 及其它 AI runtime、工具服務的網路、資料掛載與權限，請在 AI stack 文件中說明；不要在本清單新增它們。
