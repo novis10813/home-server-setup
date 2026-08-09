@@ -8,6 +8,7 @@
 |------|------|------|
 | [Hermes Agent](hermes.md) | 自架 AI agent | Gateway、Dashboard、持久化記憶與可選的 sandbox/backend 控制平面 |
 | [SearXNG](searxng.md) | 隱私友善元搜尋 | 提供 AI agent 使用的搜尋引擎，並提供內部 HTTPS 入口 |
+| [Firecrawl](firecrawl.md) | 網頁內容擷取引擎 | 供 Hermes `web_extract` 工具使用，僅限 `ai_services` 內網存取 |
 
 ## Compose 主檔
 

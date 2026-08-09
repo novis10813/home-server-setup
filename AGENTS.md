@@ -64,7 +64,8 @@
 │   └── ai/                             # AI service / control plane 定義
 │       ├── hermes.yml                 # Hermes Agent
 │       ├── searxng.yml                # SearXNG 搜尋引擎
-│       └── hermes-socket-proxy.yml    # Hermes 專用 Docker API 安全代理
+│       ├── hermes-socket-proxy.yml    # Hermes 專用 Docker API 安全代理
+│       └── firecrawl.yml              # Firecrawl 網頁擷取引擎（api + playwright + redis）
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）

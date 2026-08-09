@@ -39,6 +39,8 @@ services:
       - DOCKER_HOST=tcp://hermes-socket-proxy:2375
       - TERMINAL_SANDBOX_DIR=${DATADIR}/hermes
       - SEARXNG_URL=http://searxng:8080
+      # Self-hosted Firecrawl for web_extract; set web.extract_backend: firecrawl in config.yaml.
+      - FIRECRAWL_API_URL=http://firecrawl:3002
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - HERMES_DASHBOARD=1

@@ -21,3 +21,4 @@ include:
   - compose/ai/hermes.yml
   - compose/ai/searxng.yml
   - compose/ai/hermes-socket-proxy.yml
+  - compose/ai/firecrawl.yml

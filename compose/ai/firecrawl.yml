@@ -1,0 +1,82 @@
+# Firecrawl - Self-hosted web scraping engine for Hermes Agent web_extract
+# https://github.com/mendableai/firecrawl
+# Minimal deployment: api + playwright-service + redis (sync /v1/scrape only)
+# No Traefik exposure - accessed by Hermes via ai_services internal network only.
+
+services:
+  ###########################################################################
+  # Firecrawl API
+  ###########################################################################
+  firecrawl:
+    container_name: firecrawl
+    image: ghcr.io/mendableai/firecrawl:${FIRECRAWL_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      ai_services: {}
+      firecrawl_internal: {}
+    environment:
+      - TZ=${TZ}
+      - PORT=3002
+      - REDIS_URL=redis://firecrawl-redis:6379
+      - PLAYWRIGHT_MICROSERVICE_URL=http://firecrawl-playwright:3000/scrape
+      # No DB authentication — service is internal to ai_services network only.
+      - USE_DB_AUTHENTICATION=false
+      # No FIRECRAWL_API_KEY required for self-hosted without authentication.
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRECRAWL_MEMORY_LIMIT:-1g}
+          cpus: "${FIRECRAWL_CPU_LIMIT:-1.0}"
+
+  ###########################################################################
+  # Firecrawl Playwright Service (headless browser renderer)
+  ###########################################################################
+  firecrawl-playwright:
+    container_name: firecrawl-playwright
+    image: ghcr.io/mendableai/playwright-service:${FIRECRAWL_PLAYWRIGHT_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      firecrawl_internal: {}
+    environment:
+      - PORT=3000
+    # Chromium requires at least 1 GB of /dev/shm; Docker default 64 MB causes OOM crashes.
+    shm_size: "1g"
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRECRAWL_PLAYWRIGHT_MEMORY_LIMIT:-2g}
+          cpus: "${FIRECRAWL_PLAYWRIGHT_CPU_LIMIT:-2.0}"
+
+  ###########################################################################
+  # Firecrawl Redis (task queue - internal to Firecrawl only)
+  ###########################################################################
+  firecrawl-redis:
+    container_name: firecrawl-redis
+    image: redis:7-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      firecrawl_internal: {}
+    # Ephemeral queue only — no persistence needed.
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: ${FIRECRAWL_REDIS_MEMORY_LIMIT:-256m}
+          cpus: "${FIRECRAWL_REDIS_CPU_LIMIT:-0.25}"
+
+networks:
+  firecrawl_internal:
+    name: firecrawl_internal
+    driver: bridge
+    internal: true
