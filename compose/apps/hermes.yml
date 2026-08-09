@@ -25,9 +25,11 @@ services:
       - TZ=${TZ}
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
+      # Host Docker must resolve every sandbox bind source to the same path.
+      - HERMES_HOME=${DATADIR}/hermes
+      - HERMES_WRITE_SAFE_ROOT=${DATADIR}/hermes
       - DOCKER_HOST=tcp://hermes-socket-proxy:2375
       - TERMINAL_SANDBOX_DIR=${DATADIR}/hermes
-      - 'TERMINAL_DOCKER_EXTRA_ARGS=["--network=ai_services"]'
       - API_SERVER_ENABLED=true
       - API_SERVER_HOST=0.0.0.0
       - HERMES_DASHBOARD=1

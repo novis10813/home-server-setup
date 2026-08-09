@@ -10,12 +10,14 @@ Traefik
   └─ https://hermes.${DOMAINNAME_1}     → Hermes Dashboard :9119
 
 Hermes
-  ├─ /opt/data ← host ${DATADIR}/hermes
-  ├─ t3_proxy  ← Traefik 對外部（內部 HTTPS）入口
-  └─ ai_services ← SearXNG 等 AI service-to-service 流量
+  ├─ /opt/data ← host ${DATADIR}/hermes（相容掛載）
+  ├─ ${DATADIR}/hermes ← host 同路徑掛載（sandbox bind source）
+  ├─ t3_proxy ← Traefik 對外部（內部 HTTPS）入口
+  ├─ ai_services ← SearXNG 等 AI service-to-service 流量
+  └─ ai_control → hermes-socket-proxy → Docker daemon
 
 Hermes sandbox
-  └─ ai_control → 專用 Docker control plane / socket proxy → Docker daemon
+  └─ ai_services ← 受限的 AI service 與 egress data plane
 ```
 
 目前 compose 服務的基礎網路是 `t3_proxy`。若啟用 sandbox/backend，`ai_services` 與 `ai_control` 是必須明確配置的隔離邊界，不應以把 host Docker socket 直接掛進 Hermes 取代。`ai_control` 只承載 Hermes 對 control plane 的 Docker API 流量；它不是讓 sandbox 直接接觸管理網路的捷徑。
@@ -39,11 +41,12 @@ Hermes sandbox
 Hermes 的資料目錄必須以同一個 host-visible 路徑提供給需要讀寫它的控制平面與 sandbox。標準契約是：
 
 ```text
-host:      ${DATADIR}/hermes
-container: /opt/data
+host data root:              ${DATADIR}/hermes
+Hermes canonical data root: ${DATADIR}/hermes
+Hermes compatibility mount: /opt/data
 ```
 
-也就是說，`DOCKER_HOST` 指向的 Docker daemon 在建立 sandbox container 時，必須能看見並解析 host 上的 `${DATADIR}/hermes`。不能只把 `/opt/data` 當成 Hermes container 內的路徑，或改用 daemon host 不存在的相對路徑；否則 sandbox 的 bind mount 會失敗，或意外掛載到錯誤位置。啟用前請確認 `${DATADIR}` 對 Docker daemon 與其 runtime 都是可用的絕對 host 路徑。
+Compose 會把同一個 host 目錄同時掛到 `/opt/data` 與 container 內的 `${DATADIR}/hermes`，並將 `HERMES_HOME`、`HERMES_WRITE_SAFE_ROOT`、`TERMINAL_SANDBOX_DIR` 指向後者。如此 Hermes 傳給 host Docker daemon 的 sandbox、skills、cache 與 proxy bind source 都是 daemon 可解析的 host absolute path。若只讓 Hermes 使用 `/opt/data`，host daemon 會把它解讀為 host `/opt/data`，造成錯誤目錄或空 bind mount。
 
 ## 首次初始化
 
@@ -102,13 +105,22 @@ Traefik 入口的認證分層如下：
 
 Hermes 與 SearXNG 等 AI 服務之間，應使用 `ai_services`；例如 sandbox 需要搜尋時，透過服務名稱與內部 port 連線，而不是暴露 host port。`t3_proxy` 是 Traefik 對外部入口網路，不能當成 sandbox 的唯一隔離措施。
 
-若需要 Hermes 建立或管理 sandbox，設定會使用 Docker client 的 `DOCKER_HOST` 指向專用 control plane，例如：
+Hermes 使用 Docker client 的 `DOCKER_HOST` 指向專用 control plane：
 
 ```dotenv
-DOCKER_HOST=tcp://ai-control:2375
+DOCKER_HOST=tcp://hermes-socket-proxy:2375
 ```
 
-實際 hostname、TLS 與 API 權限必須與 AI compose 定義一致；不要把 Docker socket 路徑或 credential 寫入本文件。sandbox 應加入 `ai_services`，並依需求限制 CPU、memory、filesystem 與 capability。
+sandbox network 必須寫入持久化設定；目前版本的 gateway 會以 `config.yaml` resolved value 覆蓋同名 terminal environment variable，因此不能只設定 `TERMINAL_DOCKER_EXTRA_ARGS`：
+
+```yaml
+terminal:
+  backend: docker
+  docker_extra_args:
+    - --network=ai_services
+```
+
+可使用 `hermes config set terminal.docker_extra_args '["--network=ai_services"]'` 寫入，再重建 Hermes。若 `proxy.enabled: true`，還必須先完成 `hermes egress setup` 並啟動 iron-proxy，否則 `execute_code` 會拒絕建立 sandbox。不要把 Docker socket 路徑或 credential 寫入文件；sandbox 仍需限制 CPU、memory、filesystem 與 capability。
 
 ### Socket Proxy 的真實安全邊界
 
