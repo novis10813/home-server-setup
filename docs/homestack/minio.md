@@ -21,12 +21,15 @@ internal-only Traefik entrypoint 與 MinIO access key/secret key。
 | Data volume | `${DATADIR}/minio` |
 | Root credentials | `${DOCKERDIR}/secrets/minio.env` |
 | App credentials | `MINIO_APP_ACCESS_KEY` / `MINIO_APP_SECRET_KEY` in `secrets/minio.env` |
+| Catalog reader credentials | `MINIO_CATALOG_READ_ACCESS_KEY` / `MINIO_CATALOG_READ_SECRET_KEY` in `secrets/minio.env` |
 | Buckets | `market-data`, `nautilus-data` |
 | App policy | `homestack-s3` read/write on both buckets |
+| Catalog reader policy | `nautilus-readonly` list/read on `nautilus-data` only |
 
 `minio-init` is an idempotent one-shot container. It creates the buckets, creates
-or verifies the `homestack-s3` policy, creates the app user, and attaches the
-policy.
+or verifies the `homestack-s3` and `nautilus-readonly` policies, creates both
+users, and attaches their policies. Backtest clients should use the catalog reader
+credential so they cannot modify raw data or catalog output.
 
 ## Operations
 

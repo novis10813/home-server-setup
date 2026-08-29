@@ -14,9 +14,10 @@
 | 已建置 data types | `trade_tick`, `order_book_depths` |
 
 Docker 內部 builder 使用 `http://minio:9000`。本地或 LAN 回測程式請使用
-`https://s3.${DOMAINNAME_1}` 與 path-style request。Access key 請向部署端
-取得，或在主機上參考 `${DOCKERDIR}/secrets/nautilus-catalog-builder.env`。
-不要把實際 secret 寫入 repo。
+`https://s3.${DOMAINNAME_1}` 與 path-style request，並使用只允許讀取
+`nautilus-data` 的專用 credential。部署主機上的 reader credential 由
+`${DOCKERDIR}/secrets/minio.env` 管理；不要把實際 secret 寫入 repo，也不要把
+builder 或 archiver 的寫入 credential 提供給回測程式。
 
 ## 最小本地專案
 
@@ -149,3 +150,32 @@ engine.add_data(depths)
 - 本範例只讀取已轉好的 catalog，不會觸發轉檔、不會寫入 S3，也不需要連
   homestack 的 Docker network。若範例跑在 Homestack Docker network 內，
   endpoint 改用 `http://minio:9000`。
+
+## One-shot 容器部署與排程
+
+`nautilus-catalog-builder` 是停止後由 cron 每日呼叫 Docker `start` 的
+one-shot 容器。Docker 會在容器建立時固定 `env_file` 與 Compose environment；
+只修改 Compose 或 secrets 不會更新既有的停止容器。修改 image、endpoint、
+credentials 或其他 builder 設定後，必須先 recreate：
+
+```bash
+cd /opt/docker
+docker compose -f docker-compose-homestack.yml create --build --force-recreate nautilus-catalog-builder
+```
+
+recreate 後應確認容器內 endpoint 是內網 MinIO，且 credential 與目前 secret
+一致。比較 credential 時只輸出相等與否，不要印出實際值。
+
+每日排程正常時，catalog 最多落後一個尚未結束的 UTC 日。檢查最近三個完整日：
+
+```bash
+docker compose -f docker-compose-homestack.yml run --rm nautilus-catalog-builder \
+  plan --start YYYY-MM-DD --end YYYY-MM-DD
+```
+
+`planned: []` 可以表示輸出已存在且 raw manifest hash 未變；應同時檢查 catalog
+最新 timestamp。若 raw 已有完整 closed day、catalog 卻超過一天未前進，先檢查
+容器設定漂移與 builder logs，再執行指定日期的 `build-day` 或 `backfill`。
+
+Alpha/backtest client 應使用只允許讀取 `nautilus-data` 的專用 MinIO credential，
+不要使用 builder 或 archiver 的寫入 credential。
