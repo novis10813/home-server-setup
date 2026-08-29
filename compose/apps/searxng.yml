@@ -1,6 +1,5 @@
 # SearXNG - Privacy-respecting metasearch engine
 # https://docs.searxng.org/admin/installation-docker.html
-# Internal network only, no auth - for AI agent access
 
 services:
   ###########################################################################
@@ -28,7 +27,6 @@ services:
       - SETUID
     networks:
       t3_proxy: {}
-      ai_services: {}
     labels:
       - "traefik.enable=true"
       - "traefik.http.routers.searxng-rtr.entrypoints=websecure-internal"
