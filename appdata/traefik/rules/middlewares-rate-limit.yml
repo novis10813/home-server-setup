@@ -12,3 +12,11 @@ http:
       rateLimit:
         average: 20
         burst: 10
+    # SearXNG: each inbound request fans out to multiple upstream engines, so
+    # the generic limit is too loose. 30 req/min sustained (burst 100 covers
+    # a UI page load + autocomplete) stops runaway scripts per client IP.
+    middlewares-rate-limit-searxng:
+      rateLimit:
+        average: 30
+        period: 1m
+        burst: 100

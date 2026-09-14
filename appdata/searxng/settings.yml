@@ -42,3 +42,19 @@ outgoing:
 engines:
   - name: wikidata
     disabled: true
+  # 2026-09: these engines blocked this server's public IP (CAPTCHA/429/403
+  # in container logs, worst: duckduckgo). Disabled so searches stop hitting
+  # guaranteed-blocked upstreams; re-enable once the IP cools down.
+  - name: duckduckgo
+    disabled: true
+  - name: startpage
+    disabled: true
+  - name: karmasearch
+    disabled: true
+  # Also 403s every request from this IP (tested 2026-09-14)
+  - name: mojeek
+    disabled: true
+  # Second general web engine (disabled by default upstream, works from this
+  # IP as of 2026-09-14; handles zh-TW queries fine)
+  - name: bing
+    disabled: false
