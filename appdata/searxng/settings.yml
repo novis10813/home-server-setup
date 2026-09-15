@@ -58,3 +58,25 @@ engines:
   # IP as of 2026-09-14; handles zh-TW queries fine)
   - name: bing
     disabled: false
+  # 2026-09-15 tested from this IP (EN + zh-TW queries): these work
+  - name: 360search
+    disabled: false
+  - name: yandex
+    disabled: false
+  # 2026-09-15 tested from this IP: blocked, do not re-enable
+  - name: qwant
+    disabled: true  # "Access denied"
+  - name: presearch
+    disabled: true  # HTTP 530
+  - name: baidu
+    disabled: true  # CAPTCHA
+  - name: sogou
+    disabled: true  # CAPTCHA
+  - name: yep
+    disabled: true  # 501 Not Implemented
+  - name: yahoo
+    disabled: true  # server disconnects
+  - name: naver
+    disabled: true  # silently returns 0 results
+  - name: crowdview
+    disabled: true  # silently returns 0 results
