@@ -8,3 +8,6 @@ logs/
 # MkDocs 建置輸出
 /site/
 .antigravitycli/
+# pi project-local: MCP 設定（含 HA token）與 adapter 套件安裝目錄
+.pi/mcp.json
+.pi/npm/
