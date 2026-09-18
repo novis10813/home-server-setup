@@ -59,6 +59,7 @@ nav:
     - MinIO: homestack/minio.md
     - Redis: homestack/redis.md
     - Nautilus catalog builder: homestack/nautilus-catalog-builder.md
+    - Pi Agent Task Manager (PAT): homestack/pat.md
 
 markdown_extensions:
   - pymdownx.superfences

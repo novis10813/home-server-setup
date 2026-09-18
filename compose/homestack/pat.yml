@@ -1,0 +1,75 @@
+# Pi Agent Task Manager (PAT) — Pi coding agent 控制台（Coordinator + 專用 PostgreSQL）
+# Source: /mnt/raid1/novis/home-stack/pi-agent-task-manager
+# 部署：從 /opt/docker/ 執行，勿直接 -f 本檔（DOCKERDIR 不會被載入）
+#   docker compose -f docker-compose-homestack.yml up -d --build pat pat-postgres
+# 存取：僅 Tailscale（PAT_TAILSCALE_IP:8010）+ shared token；不接 Traefik。
+# 單 uvicorn process 是必要條件（見 repo README），勿增加 replica。
+
+services:
+  pat-postgres:
+    container_name: pat-postgres
+    image: postgres:16-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack     # 僅供 pat 容器內部連線
+    env_file:
+      - ${DOCKERDIR}/secrets/pat.env
+    environment:
+      - POSTGRES_USER=pat
+      - POSTGRES_DB=pat
+      - TZ=${TZ:-UTC}
+    volumes:
+      - ${DATADIR}/pat/postgres:/var/lib/postgresql/data
+      - /etc/localtime:/etc/localtime:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pat -d pat"]
+      interval: 10s
+      timeout: 5s
+      start_period: 15s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+
+  pat:
+    container_name: pat
+    build:
+      context: /mnt/raid1/novis/home-stack/pi-agent-task-manager
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - homestack     # pat-postgres:5432
+    ports:
+      - "${PAT_TAILSCALE_IP:-127.0.0.1}:8010:8000"
+    volumes:
+      - ${DATADIR}/pat:/data
+      - /etc/localtime:/etc/localtime:ro
+    env_file:
+      - ${DOCKERDIR}/secrets/pat.env
+    environment:
+      - TZ=${TZ:-UTC}
+      - DATA_DIR=/data
+    depends_on:
+      pat-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/',timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
+
+networks:
+  homestack:
+    external: true
