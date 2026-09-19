@@ -17,6 +17,8 @@
   ```json
   {"type":"call_service","domain":"automation","service":"reload","target":{"entity_id":"..."}}
   ```
+- service 參數放在 **`service_data`** 鍵（舊的 `data` 已不行）：
+  送 `"data":{...}` → `extra keys not allowed @ data['data']`
 - 舊格式 `"service":"domain/service"` → `required key not provided @ data['domain']. Got None`
 - **成功回傳**：`{id, type:"result", context:{...}}`（**沒有** `success` 欄位）
 - **失敗回傳**：`{success:false, error:{code, message}}`
@@ -36,6 +38,18 @@
 ### 5. REST service API
 - `POST /api/services/<domain>/<service>` 在 2026.4 回 **400 Bad Request**（兩種 body 格式都試過）
 - 一律改用 WS `call_service`
+
+### 6. 被砍掉的 service / TTS 新路徑
+- `media_player.announce` 已移除（`Service media_player.announce not found`）
+- TTS 改用 **entity service** `tts.speak`（掛在 `tts.*` entity 上）：
+  ```json
+  {"type":"call_service","domain":"tts","service":"speak",
+   "target":{"entity_id":"tts.google_translate_en_com"},
+   "service_data":{"media_player_entity_id":"media_player.ke_ting","message":"..."}}
+  ```
+  - 播完 player 回 `idle`，**不會自動續播**之前播的媒體
+  - 本 instance 的 TTS = `tts.google_translate_en_com`（**英文** only；中文會念錯，要中文需另加 TTS 平台）
+- `dashboards/*` WS commands 全部移除（dashboard 只能 UI 編輯，或停機改 `/config/.storage/lovelace.dashboard_<id>` JSON 再開機）
 
 ## YAML / reload 語意
 
