@@ -15,6 +15,12 @@ services:
     restart: unless-stopped
     networks:
       - t3_proxy
+    # 已知限制（2026-09-19 調查）：netdev collector 只能看到容器自己的介面（eth0/lo）。
+    # 原因：bind mount host /proc 到新容器後 /proc/net 跟著容器 netns 走；
+    # 改 network_mode: host 可看到 host 介面，但本機有一個未解的 host 層安全機制：
+    # 容器→host 的非 sshd/docker-proxy 端口 TCP SYN 會被無聲丟棄（ping 通、無 iptables/nft/ebtables/tc/conntrack 規則），
+    # 導致 prometheus（t3_proxy 容器）抓不到 host-net 容器綁定的 host IP:port。
+    # 解決前，主機網路流量面板從 Mission Control 移除。
     pid: host  # 需要存取主機 PID namespace 以收集程序指標
     command:
       - --path.procfs=/host/proc

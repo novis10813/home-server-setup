@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# File-based dashboard provisioning
+# JSON 檔位置：appdata/grafana/dashboards/（bind mount 到 /var/lib/grafana/dashboards）
+# 注意：allowUiUpdates=true 表示可在 UI 微調，但檔案更新（updateIntervalSeconds）會以
+# 檔案內容為準覆蓋 UI 的修改——要改面板請改 JSON 檔。
+providers:
+  - name: mission-control
+    folder: Mission Control
+    type: file
+    disableDeletion: false
+    updateIntervalSeconds: 30
+    allowUiUpdates: true
+    options:
+      path: /var/lib/grafana/dashboards
+      foldersFromFilesStructure: false

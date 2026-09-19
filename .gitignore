@@ -11,3 +11,5 @@ logs/
 # pi project-local: MCP 設定（含 HA token）與 adapter 套件安裝目錄
 .pi/mcp.json
 .pi/npm/
+# pi session artifacts（僅本 session 的 review 介面，不入版控）
+.pi/artifacts/

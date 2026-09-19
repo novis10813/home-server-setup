@@ -1,0 +1,16 @@
+apiVersion: 1
+
+# Prometheus data source (provisioned)
+# 註：UI 裡有一個手動建立的 prometheus data source (uid afcibdrcz6ayod) 供舊的
+# community dashboards 使用；此處另建 uid=prometheus 作為預設，新面板皆引用它。
+datasources:
+  - name: Prometheus
+    uid: prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: false
+    jsonData:
+      httpMethod: POST
+      timeInterval: 15s

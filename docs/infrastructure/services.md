@@ -93,6 +93,7 @@
 - `traefik:8080` — Traefik 指標（需在 Traefik 啟用 `--metrics.prometheus=true`）
 - `node-exporter:9100` — 主機層級指標（CPU、記憶體、磁碟、網路）
 - `cadvisor:8080` — 容器層級指標
+- `crypto-relay:9090` — Crypto relay 同步指標
 
 ---
 
@@ -110,6 +111,7 @@
   - `/` → `/rootfs:ro`
 - **特殊設定**：`pid: host`（需存取主機 PID namespace）
 - **Port**：9100（僅內部，供 Prometheus 抓取）
+- **已知限制**：netdev collector 只能看到容器自己的介面（`eth0`/`lo`），看不到 host 的 `enp4s0`（bind mount `/proc` 到容器後 `/proc/net` 跟著容器 netns 走）。曾嘗試 `network_mode: host` 迴避，但 host 有一個未解機制會無聲丟棄「容器 → host 未發布 port」的 TCP SYN（無任何 firewall 規則），導致 prometheus 抓不到；詳見 `compose/infrastructure/node-exporter.yml` 註解。解決前，主機網路流量面板不放在 Mission Control。
 
 ---
 
@@ -141,7 +143,10 @@
 - **網路**：`t3_proxy`
 - **用途**：視覺化 Prometheus 收集的指標，提供儀表板與告警功能。
 - **資料**：`${DATADIR}/grafana/` → `/var/lib/grafana`（運行時資料）
-- **Secrets**：`grafana_admin_password`（管理員密碼，以 bind mount 掛載）
+- **Secrets**：`grafana_admin_password`（管理員密碼，Docker secrets 機制；**勿改用 bind mount**——host 600 權限檔綁入後容器 entrypoint（uid 472）讀不到，GF_SECURITY_ADMIN_PASSWORD 會變空）
+- **Provisioning**：
+  - Data sources：`${DOCKERDIR}/appdata/grafana/provisioning/datasources/`（含 `prometheus.yaml`，uid=`prometheus`）
+  - Dashboards：`${DOCKERDIR}/appdata/grafana/provisioning/dashboards/`（provider）＋ `${DOCKERDIR}/appdata/grafana/dashboards/`（JSON）
 - **Traefik**：
   - `grafana.${DOMAINNAME_1}`：HTTPS、`chain-oauth@file`（OAuth 保護）
   - 僅使用 `websecure-internal` entrypoint（僅內網存取）
@@ -154,8 +159,28 @@
 ### 初始設定
 
 1. 首次登入使用 admin 帳號與 secrets 中設定的密碼
-2. 新增 Prometheus 資料來源：URL 為 `http://prometheus:9090`
+2. 新增 Prometheus 資料來源：URL 為 `http://prometheus:9090`（現已 provisioning，uid=`prometheus`）
 3. 匯入 Traefik 儀表板：Dashboard ID `17346`
+
+### Mission Control 儀表板（家服務總覽）
+
+- **位置**：Grafana → Mission Control 資料夾 → 「Mission Control - 家服務總覽」（uid `mission-control`）
+- **檔案**：`appdata/grafana/dashboards/mission-control.json`（file provisioning，30 秒自動同步；**改面板請改 JSON 檔**，UI 修改會被覆蓋）
+- **內容**：
+  - 總覽 stat：uptime、load、記憶體/磁碟使用率、容器數、5xx 比例、近 1 小時重啟容器數、抓取健康
+  - 主機：CPU/負載、記憶體、磁碟 I/O 與可用空間
+  - 容器（cAdvisor）：CPU/記憶體 Top 8、運行時間表（紅色 = 近 1 小時重啟）
+  - Traefik：entrypoint 請求速率、服務 Top 10、status code 分佈、open connections
+  - Loki：容器日誌量、近期 error/fatal/panic 日誌（無 per-container 過濾，promtail docker stage 未產生 `container_name` label，待修）
+- **Data source**：預設 Prometheus（uid `prometheus`）＋ Loki（uid `loki`）。另有一個 UI 手動建立的 prometheus data source（uid `afcibdrcz6ayod`）供舊 community dashboards 使用，勿刪。
+
+### 管理員密碼重設（忘記/失同步時）
+
+```bash
+docker exec grafana /usr/share/grafana/bin/grafana-cli admin reset-admin-password "$(cat /opt/docker/secrets/grafana_admin_password)" /usr/share/grafana
+```
+
+注意：直接改 `grafana.db` 的 bcrypt hash 無效（Grafana 12 用自己的 hash 格式，需經 grafana-cli / UI / API 寫入）。
 
 ---
 
