@@ -2,6 +2,12 @@
 # Ref: https://grafana.com/docs/grafana/latest/setup-grafana/installation/docker/
 # Profile: monitor (啟動指令: docker compose --profile monitor up -d)
 
+# Docker-managed secret: daemon 以 root 複製、容器內 0440 root:root，
+# 避免 host 600 權限檔被 bind mount 後容器（uid 472 / remapped root）讀不到
+secrets:
+  grafana_admin_password:
+    file: ${DOCKERDIR}/secrets/grafana_admin_password
+
 services:
   grafana:
     container_name: grafana
@@ -17,8 +23,11 @@ services:
     user: "472:472"  # Grafana 官方建議的 UID:GID
     volumes:
       - ${DATADIR}/grafana:/var/lib/grafana
-      - ${DOCKERDIR}/secrets/grafana_admin_password:/run/secrets/grafana_admin_password:ro
       - ${DOCKERDIR}/appdata/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
+      - ${DOCKERDIR}/appdata/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ${DOCKERDIR}/appdata/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    secrets:
+      - grafana_admin_password
     environment:
       - TZ=${TZ:-UTC}
       - GF_SERVER_ROOT_URL=https://grafana.${DOMAINNAME_1}
