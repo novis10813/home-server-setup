@@ -53,27 +53,23 @@ media:
 
 `__MANUAL_ENTRY__` 是 UI「手動輸入 video ID」路徑生成的 navigate 格式，服務呼叫照抄即可。
 
-## 自動化模式：固定時間開播 + 直播上線自動切換
+## 自動化模式（2026-09 簡化版）
 
-本 instance 的 `automation.zao_shang_kan_zha_huang_zhi_bo` 用的結構（完整 YAML 見
+`automation.zao_shang_kan_zha_huang_zhi_bo` 現行結構（完整 YAML 見
 `/mnt/raid1/homeassistant/automations.yaml`）：
 
-- **triggers**：
-  - `time` 08:30（每天）
-  - `state`：`sensor.yutinghao_live_video`（sensor 出現新 video ID = 直播上線）
-- **actions**：`choose`
-  - 條件分支（`trigger.trigger == 'state'`）：直播上線時，若 TV 開著（`on`/`playing`）且週一~五 → 播 `vnd.youtube://{{ trigger.to }}`
-  - `default:` 分支（time + 手動 Trigger）：TV turn_on → switch turn_on → delay 10s → 播 template 選定的影片
+- **triggers**：只有一支 `time` 08:30（`weekday: mon~fri`）。**無 state trigger**。
+- **actions**：`media_player.turn_on`（TV entity）→ `switch.turn_on`（門前插座 entity）
+  → `delay 10s` → `if sensor ≠ unknown/unavailable` 才 `play_media vnd.youtube://{{ states('sensor.yutinghao_live_video') }}`。
+  全部用 **entity_id** 而非 device_id（device_id 會失效且不可讀）。
 
-**default 分支的影片選擇 template**（優先級：週一~五的財經直播 > 札幌 24/7 > 固定 fallback ID）：
+**設計沿革**：舊版（2026-02）有 state trigger + 札幌 24/7 fallback，理由是「8:30 整
+`/live` 頁面還沒上線」。**實測推翻**：2026-09 直播 ID 約 8:00 前就發布（YouTube
+提前建立直播），8:30 讀 sensor 直接拿到 ID，fallback 與 state trigger 從未被用到，
+2026-09 依使用者要求移除（週末不觸發、無 24/7 墊場）。若日後直播 ID 發布習慣
+改變（8:30 時仍 unknown），再考慮加回偵測補播。
 
-```jinja
-vnd.youtube://{% set yut = states('sensor.yutinghao_live_video') %}{% set sap = states('sensor.sapporo_247_live_video') %}{% set vid = 'TPIzbMwlrOI' %}{% if sap not in ('unknown', 'unavailable') %}{% set vid = sap %}{% endif %}{% if now().weekday() < 5 and yut not in ('unknown', 'unavailable') %}{% set vid = yut %}{% endif %}{{ vid }}
-```
-
-**為什麼要兩層**：財經直播 8:30 整開始，8:30 那一刻 `/live` 頁面還沒上線（幾秒~幾分鐘延遲），
-所以 8:30 先播 24/7 墊場，state trigger 在下一輪 scan（2 分鐘內）抓到直播 ID 後自動切換。
-`mode: single` 避免兩支觸發重疊。
+**注意**：`sensor.sapporo_247_live_video` 已無自動化使用，但**保留**作為 24/7 直播偵測模式的活範例（持續驗證中，要對任何 24/7 頻道做偵測直接抄這個 sensor 改 URL）；成本 = 每 10 分鐘抓一次 YouTube 頁面。
 
 ## 排障
 

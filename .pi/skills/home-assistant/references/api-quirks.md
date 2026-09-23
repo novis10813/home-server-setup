@@ -26,8 +26,7 @@
 ### 3. automation.trigger 變成 entity service
 - `homeassistant.trigger` 已移除（`Service homeassistant.trigger not found`）
 - 正確：domain=`automation`, service=`trigger`, target=automation entity
-- 手動 trigger 的 `trigger.trigger` 值**不是** `'time'`/`'state'`（是 `{"platform":None}` 之類的結構）——
-  不要在 choose 裡比對它，用 default 分支接住（見下）
+- **`trigger` template 變數已無 `trigger` 子鍵**（2026.4 實測 trace：只有 `id/idx/alias/platform/entity_id/from_state/to_state/for/attribute/description`）。觸發平台看 **`trigger.platform`**：`"time"`/`"state"`/…，**手動 trigger 為 `None`**。舊寫法 `{{ trigger.trigger == 'state' }}` 永遠 False（undefined 比對）→ 所有 trigger 落 default 分支（曾致 state 觸發重跑完整開燈開 TV 流程）。正確：`{{ trigger.platform == 'state' }}`；手動 trigger 自然落 default 接住
 
 ### 4. 讀 config
 - automation config：WS `{"type":"automation/config","entity_id":"automation.xxx"}` → `{config:{...raw...}}`
@@ -72,7 +71,7 @@ YAML 有錯 → domain 沒載入 → reload service not found → 只能重啟�
 - choose:
     - conditions:
         - condition: template
-          value_template: "{{ trigger.trigger == 'state' }}"
+          value_template: "{{ trigger.platform == 'state' }}"   # 注意 trigger.platform，見 §3
       sequence:
         - ...
   default:        # 與 choose: 同級（action 層），不是「無條件的分支」
