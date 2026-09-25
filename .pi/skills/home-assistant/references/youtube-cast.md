@@ -34,24 +34,38 @@ rest:
 - 直播中 = video ID；非直播 = `unknown`
 - 本 instance 現有的：`sensor.yutinghao_live_video`（財經皓角，2 分鐘）、`sensor.sapporo_247_live_video`（札幌 24/7，10 分鐘，channel URL `UCIMs8atP2qoxcfAvhiFlzGQ`）
 
-## cast TV 播 YouTube（vnd.youtube:// 格式）
+## TV 播 YouTube：走 Cast，不要走 Android TV Remote 深層連結
 
-本 instance 的客廳電視 = `media_player.ke_ting_dian_shi_2`（cast）。
-`media_player.play_media` 的 `data.media`：
+客廳電視在 HA 有兩組 entity（同一台 Google TV）：
+
+| entity | 平台 | 用途 |
+|--------|------|------|
+| `media_player.ke_ting_dian_shi` | cast | **播 YouTube** |
+| `media_player.ke_ting_dian_shi_2` / `remote.ke_ting_dian_shi` | androidtv_remote | 開關機、送按鍵 |
+
+**地雷（2026-09-25 實測）**：對 androidtv_remote 的 `media_player.ke_ting_dian_shi_2` 送
+`play_media` `vnd.youtube://<id>`（`media_content_type: app`）= 深層連結冷啟動 YouTube App，
+會**卡在「選擇帳號／誰在觀看？」頁**，要人按一下才進影片。
+改用 Cast（YouTube 接收端，app_id `233637DE`，與手機投放同路徑）直接進影片，不經帳號頁：
 
 ```yaml
-media:
-  media_content_id: "vnd.youtube://{{ trigger.to }}"   # video ID（直播 ID 也照樣用）
-  media_content_type: app
-  metadata:
-    navigateIds:
-    - {}
-    - media_content_type: ''
-      media_content_id: __MANUAL_ENTRY__
-    browse_entity_id: media_player.ke_ting_dian_shi_2
+action: media_player.play_media
+target:
+  entity_id: media_player.ke_ting_dian_shi
+data:
+  media_content_type: cast
+  media_content_id: '{"app_name": "youtube", "media_id": "<video_id>"}'
 ```
 
-`__MANUAL_ENTRY__` 是 UI「手動輸入 video ID」路徑生成的 navigate 格式，服務呼叫照抄即可。
+已包成 `script.tv_cast_youtube`（`/mnt/raid1/homeassistant/scripts.yaml`，參數 `video_id`）。
+
+**首次投放常失敗**：YouTube 接收端剛啟動時拿不到 screen_id →
+`400 Client Error: screen_ids parameter error ... get_lounge_token_batch`，再投一次就成功。
+這是 `requests` 的 HTTPError，**不是 HomeAssistantError，`continue_on_error` 接不住**
+（`helpers/script.py` `_handle_exception`），直接呼叫會中止整個自動化。
+所以自動化用 `script.turn_on`（非阻塞，錯誤留在 script 內）+ `repeat`：
+`wait_template` 等 `state_attr('media_player.ke_ting_dian_shi','media_content_id') == <video_id>`
+15 秒，沒成功就再投，最多 3 次。
 
 ## 自動化模式（2026-09 簡化版）
 
@@ -60,7 +74,8 @@ media:
 
 - **triggers**：只有一支 `time` 08:30（`weekday: mon~fri`）。**無 state trigger**。
 - **actions**：`media_player.turn_on`（TV entity）→ `switch.turn_on`（門前插座 entity）
-  → `delay 10s` → `if sensor ≠ unknown/unavailable` 才 `play_media vnd.youtube://{{ states('sensor.yutinghao_live_video') }}`。
+  → `delay 10s` → `if sensor ≠ unknown/unavailable` 才以 `script.turn_on script.tv_cast_youtube`
+  （`video_id: {{ states('sensor.yutinghao_live_video') }}`）Cast 播放，失敗重試最多 3 次（見上節）。
   全部用 **entity_id** 而非 device_id（device_id 會失效且不可讀）。
 
 **設計沿革**：舊版（2026-02）有 state trigger + 札幌 24/7 fallback，理由是「8:30 整

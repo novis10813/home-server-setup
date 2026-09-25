@@ -60,10 +60,12 @@ call_service 欄位、automation.trigger、choose default、regex filter 改名�
 | entity | 說明 |
 |--------|------|
 | `switch.ce_suo_men_qian_cha_zuo` | 廁所門前插座（Tapo 插頭，供燈用） |
-| `media_player.ke_ting_dian_shi_2` | 客廳電視（cast；播 YouTube 用 `vnd.youtube://`，見 `references/youtube-cast.md`） |
+| `media_player.ke_ting_dian_shi` | 客廳電視 **Cast**（播 YouTube 一律走這個：`script.tv_cast_youtube`，見 `references/youtube-cast.md`） |
+| `media_player.ke_ting_dian_shi_2` / `remote.ke_ting_dian_shi` | 客廳電視 **Android TV Remote**（開關機、按鍵；**不要**用它送 `vnd.youtube://` 播影片——會卡 YouTube 帳號選擇頁） |
+| `script.tv_cast_youtube` | Cast 播 YouTube（`video_id` 參數）；首次常失敗需重試，用 `script.turn_on` 呼叫 |
 | `sensor.yutinghao_live_video` | 財經皓角（@yutinghaofinance）直播 video ID 偵測（非直播 = unknown） |
 | `sensor.sapporo_247_live_video` | 札幌 24/7 直播 video ID 偵測 |
-| `automation.zao_shang_kan_zha_huang_zhi_bo` | 週一~五 8:30 開燈開 TV + 播財經直播（僅 time trigger，週末不觸發；2026-09 已移除 state trigger 與札幌 fallback；手動 Trigger = 完整 dry run） |
+| `automation.zao_shang_kan_zha_huang_zhi_bo` | 週一~五 8:30 開燈開 TV + Cast 播財經直播（僅 time trigger，週末不觸發；2026-09 已移除 state trigger 與札幌 fallback；手動 Trigger = 完整 dry run） |
 
 entity ID 是 friendly name 的 slug，**改過名字就變**——用 API 查，不要憑記憶。
 
