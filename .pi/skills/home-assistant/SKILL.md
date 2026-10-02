@@ -24,7 +24,7 @@ compose 檔：`/opt/docker/compose/apps/home-assistant.yml`。
 | 查 states | `GET /api/states`（或 `/<entity_id>`） |
 | 叫 service | **WS** `call_service`（格式見 `references/api-quirks.md`），REST `/api/services/...` 在 2026.x 會 400 |
 | 讀 automation config | WS `{"type":"automation/config","entity_id":"automation.xxx"}` |
-| 控設備（便捷） | `mcp` tool（pi-mcp-adapter → HA `/api/mcp`，server 名 `home-assistant`）：搜 `mcp({search:"..."})`、叫 `mcp({tool:"...",args:{}})` |
+| 控設備（便捷） | `mcp` tool（Pi 內建 MCP → HA `/api/mcp`，server 名 `home-assistant`）：搜 `mcp({search:"..."})`、叫 `mcp({tool:"...",args:{}})` |
 | WS client 腳本 | `node scripts/ha_ws.mjs <ha_url> <token> '<json 命令陣列>'`（auth 格式已處理好） |
 
 **macvlan IP（192.168.0.250）host 連不到**（kernel 限制）——絕對不要用它。
@@ -73,4 +73,4 @@ entity ID 是 friendly name 的 slug，**改過名字就變**——用 API 查�
 
 - YouTube / 直播偵測 / cast 播放模式：`references/youtube-cast.md`
 - 網路拓撲、檔案權限、log、http.ban：`references/infrastructure.md`
-- MCP（pi-mcp-adapter + HA mcp_server）與排障：`references/mcp-setup.md`
+- MCP（Pi 內建 MCP + HA mcp_server）與排障：`references/mcp-setup.md`
