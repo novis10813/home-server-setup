@@ -13,7 +13,8 @@
 - **安全代理**：LinuxServer Socket Proxy（Docker API 安全存取）
 - **SSO 認證**：traefik-forward-auth（OAuth 2.0）
 - **憑證管理**：Let's Encrypt + Cloudflare DNS Challenge
-- **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Grafana Loki 3.5.7 + Promtail 3.5.7 + Node Exporter v1.9.1 + cAdvisor v0.52.1（使用 `profiles: [monitor]`）
+- **LAN DNS**：Pi-hole（主機埠 53）
+- **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Grafana Loki 3.5.7 + Promtail 3.5.7 + Node Exporter v1.9.1 + cAdvisor v0.52.1 + Alertmanager v0.32.0（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
 
@@ -31,34 +32,72 @@
 /opt/docker/
 ├── docker-compose-infrastructure.yml  # 主入口 Compose（include 子檔案）
 ├── docker-compose-app.yml             # App 入口 Compose（include 子檔案）
-├── docker-compose-media.yml           # Media 入口 Compose（可選）
-├── docker-compose-homestack.yml       # 自訂服務 / NATS（Home stack）
+├── docker-compose-media.yml           # Media 入口 Compose
+├── docker-compose-homestack.yml       # Home stack 入口 Compose（自訂服務）
 ├── .env.example                        # 環境變數範本（複製為 .env 使用）
 ├── .env                                # 本機環境變數（勿提交）
 ├── mkdocs.yml                          # MkDocs 導航與主題設定
 ├── requirements-docs.txt              # MkDocs 依賴（mkdocs、mkdocs-material）
+├── .github/                            # GitHub workflows（diagrams 渲染）
 ├── docs/                               # 設定文件（Markdown 來源）
 │   ├── README.md                       # 文件首頁
 │   ├── infrastructure/                # Infrastructure 類說明（架構、設定、服務、Traefik 規則、操作）
 │   ├── app/                            # App 類說明
 │   ├── media/                          # Media 類說明
 │   ├── homestack/                      # Home stack（自訂服務、NATS）
+│   ├── diagrams/                       # d2 原始檔與產出架構圖
+│   ├── plans/                          # 設計案
+│   └── superpowers/                    # 遷移 / 安裝計畫與 spec
 ├── compose/
 │   ├── infrastructure/
 │   │   ├── traefik.yml                 # Traefik 反向代理服務定義
 │   │   ├── socket-proxy.yml            # Docker API 安全代理
-│   │   ├── traefik_forward_auth.yml    # OAuth SSO 服務
+│   │   ├── traefik-forward-auth.yml    # OAuth SSO 服務
+│   │   ├── pihole.yml                  # Pi-hole LAN DNS（主機埠 53）
+│   │   ├── cron.yml                    # 主機 cron 任務（profile: network）
 │   │   ├── prometheus.yml              # Prometheus 監控（profile: monitor）
+│   │   ├── alertmanager.yml            # Alertmanager 警報路由（profile: monitor）
 │   │   ├── grafana.yml                 # Grafana 儀表板（profile: monitor）
 │   │   ├── loki.yml                    # Grafana Loki (profile: monitor)
 │   │   ├── promtail.yml                # Promtail (profile: monitor)
 │   │   ├── node-exporter.yml           # 主機指標（profile: monitor）
 │   │   └── cadvisor.yml                # 容器指標（profile: monitor）
 │   ├── apps/
-│   │   ├── immich.yml                 # Immich（App）
-│   │   └── searxng.yml                # SearXNG（App）
+│   │   ├── hugo.yml                    # Hugo 靜態網站（根網域）
+│   │   ├── hugobsidian.yml             # HugObsidian（Obsidian QuickAdd → Hugo 內容）
+│   │   ├── calibre-web-automated.yml   # Calibre-Web-Automated（電子書庫）
+│   │   ├── calibre-web.yml             # 已停用：已遷移至 calibre-web-automated，不在 include
+│   │   ├── calibre.yml                 # 已停用：不在 include
+│   │   ├── code-server.yml             # 瀏覽器版 VS Code
+│   │   ├── shelfmark.yml               # 書籍搜尋與下載前端
+│   │   ├── home-assistant.yml          # Home Assistant
+│   │   ├── immich.yml                  # Immich（照片庫）
+│   │   ├── kavita.yml                  # Kavita（數位書庫）
+│   │   ├── minecraft.yml               # Minecraft（Velocity proxy + Fabric 後端）
+│   │   ├── portainer.yml               # Portainer（容器管理）
+│   │   ├── couchdb.yml                 # CouchDB（Obsidian LiveSync 後端）
+│   │   ├── cliproxyapi.yml             # CLIProxyAPI
+│   │   ├── webdav.yml                  # WebDAV（Zotero 論文儲存）
+│   │   └── searxng.yml                 # SearXNG
+│   ├── media/
+│   │   ├── jellyfin.yml                # Jellyfin（串流媒體）
+│   │   ├── jellyseerr.yml              # Jellyseerr（媒體請求）
+│   │   ├── sonarr.yml                  # Sonarr（影集）
+│   │   ├── radarr.yml                  # Radarr（電影）
+│   │   ├── prowlarr.yml                # Prowlarr（indexer 管理）
+│   │   ├── qbittorrent.yml             # qBittorrent（下載）
+│   │   └── bazarr.yml                  # Bazarr（字幕）
 │   └── homestack/
-│       └── nats.yml                    # NATS（Home stack）
+│       ├── nats.yml                    # NATS 訊息佇列與 JetStream
+│       ├── redis.yml                   # Redis（Bookmap hot cache）
+│       ├── minio.yml                   # MinIO（S3 物件儲存）
+│       ├── crypto-relay.yml            # Binance WebSocket → NATS 市場資料 relay
+│       ├── financial-dashboard.yml     # 金融儀表板（nginx + dashboard-api）
+│       ├── questdb.yml                 # QuestDB（時間序列資料庫）
+│       ├── market-data-recorder.yml    # 長期市場資料錄製（SQLite → QuestDB）
+│       ├── market-data-archiver.yml    # 市場資料歸檔
+│       ├── nautilus-catalog-builder.yml# Nautilus Trader Parquet catalog 建置（cron）
+│       └── pat.yml                     # Pi Agent Task Manager
 ├── appdata/
 │   ├── traefik/
 │   │   ├── rules/                      # Traefik 動態規則（middlewares、chains）
@@ -66,14 +105,17 @@
 │   │       └── acme.json               # Let's Encrypt 憑證儲存（chmod 600）
 │   ├── prometheus/
 │   │   └── prometheus.yml             # Prometheus 抓取設定
+│   ├── alertmanager/
+│   │   └── alertmanager.yml            # Alertmanager 路由與通知設定
 │   ├── loki/
 │   │   └── loki-config.yaml           # Loki config
 │   ├── promtail/
 │   │   └── promtail-config.yaml       # Promtail 抓取設定
 │   ├── grafana/
 │   │   └── provisioning/datasources/  # Grafana datasource files (e.g. Loki)
-│   └── nats/
-│       └── nats-server.conf           # NATS 主設定（無認證，依賴 Docker 網路隔離）
+│   ├── nats/
+│   │   └── nats-server.conf           # NATS 主設定（無認證，依賴 Docker 網路隔離）
+│   └── <service>/                     # 其他服務手寫設定（couchdb、cron、crypto-relay、hugo、minecraft、questdb、searxng、velocity）
 ├── secrets/                            # 敏感檔案（勿提交版控）
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
@@ -115,12 +157,19 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 |---------|------|------|
 | `t3_proxy` | `192.168.90.0/24` | Traefik 路由與後端服務通訊 |
 | `socket_proxy` | `192.168.91.0/24` | Traefik 與 Socket Proxy 通訊 |
+| `ha_macvlan` | macvlan（parent `enp4s0`，`192.168.0.0/24`，IP range `.240/28`） | Home Assistant 取得真實 LAN IP（mDNS 自動發現） |
+| `homestack` | bridge（自動分配） | Home stack 服務內部隔離通訊 |
+| `default` | bridge（自動分配） | 各 Compose 專案預設 bridge 網路 |
 
 ### 埠對應
 
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
 - `${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，建議僅內網或以防火牆限制）
+- `53`（tcp/udp）：Pi-hole LAN DNS
+- `6881`（tcp/udp）：qBittorrent torrent peer
+- `25565`（tcp）/ `25577`（udp）：Minecraft Velocity / Fabric 後端（經 Traefik 容器發布）
+- `8010`：PAT coordinator（綁定 `${PAT_TAILSCALE_IP}`，預設 `127.0.0.1`）
 
 ## 程式碼風格指南
 

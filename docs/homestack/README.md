@@ -17,9 +17,9 @@
 | NATS | 訊息佇列與 JetStream；客戶端協定 **不**經 Traefik 暴露 | [NATS](nats.md) |
 | Redis | Ephemeral 15-minute Bookmap hot cache for `financial-dashboard` | [Redis](redis.md) |
 | MinIO | S3-compatible object storage；S3 API internal HTTPS，Console OAuth | [MinIO](minio.md) |
-| crypto-relay | Binance WebSocket → NATS 市場資料 relay | root repo `ROADMAP.md` |
-| financial-dashboard | `dash.${DOMAINNAME_1}` liquidity 與 recording policies UI | root repo `ROADMAP.md` |
-| market-data-recorder | SQLite 長期錄製政策 → QuestDB；admin API 僅供內網反代 | root repo `ROADMAP.md` |
+| crypto-relay | Binance WebSocket → NATS 市場資料 relay | （文件待補） |
+| financial-dashboard | `dash.${DOMAINNAME_1}` liquidity 與 recording policies UI | （文件待補） |
+| market-data-recorder | SQLite 長期錄製政策 → QuestDB；admin API 僅供內網反代 | （文件待補） |
 | nautilus-catalog-builder | raw market data → Nautilus Trader Parquet catalog；cron 每日轉檔 | [Nautilus catalog builder](nautilus-catalog-builder.md) |
 
 ## 啟動與維護
