@@ -112,8 +112,8 @@
 | 81 | 81 | HTTP（外部 `web-external`） |
 | 443 | 443 | HTTPS（內部 `websecure-internal`） |
 | 444 | 444 | HTTPS（外部 `websecure-external`） |
-| `${TRAEFIK_PORT}` | 8080 | Traefik Dashboard API |
+| `127.0.0.1:${TRAEFIK_PORT}` | 8080 | Traefik Dashboard API（僅主機本機） |
 | 53 | 53 | Pi-hole DNS（TCP/UDP） |
 | 8053 | 80 | Pi-hole Web 備用 |
 
-HTTP 對外（81）與對內（80）皆會強制導向對應的 HTTPS entrypoint。
+HTTP 對外（81）與對內（80）皆會強制導向 HTTPS。對外（81）導向 `:443`，因 Router 將 WAN 443 轉發至 444。

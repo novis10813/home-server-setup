@@ -147,7 +147,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 | `DATADIR` | 容器運行時資料路徑 | `/mnt/raid1` |
 | `TZ` | 時區 | `Asia/Taipei` |
 | `DOMAINNAME_1` | 主要網域 | `example.com` |
-| `TRAEFIK_PORT` | Traefik API/Dashboard（insecure）主機埠（建議僅內網或以防火牆限制） | `8080` |
+| `TRAEFIK_PORT` | Traefik API/Dashboard（insecure）主機埠（僅綁定 `127.0.0.1`） | `8080` |
 | `LOCAL_IPS` | 信任的內網 IP CIDR | `192.168.0.0/16,10.0.0.0/8` |
 | `CLOUDFLARE_IPS` | Cloudflare IP 範圍 | 見 `.env.example` |
 
@@ -165,10 +165,10 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
-- `${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，建議僅內網或以防火牆限制）
+- `127.0.0.1:${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，僅主機本機可存取）
 - `53`（tcp/udp）：Pi-hole LAN DNS
 - `6881`（tcp/udp）：qBittorrent torrent peer
-- `25565`（tcp）/ `25577`（udp）：Minecraft Velocity / Fabric 後端（經 Traefik 容器發布）
+- `25565`（tcp）/ `25577`（udp）：Minecraft Velocity / Fabric 後端（經 Traefik 容器發布；目前已在 `traefik.yml` 註解停用）
 - `8010`：PAT coordinator（綁定 `${PAT_TAILSCALE_IP}`，預設 `127.0.0.1`）
 
 ## 程式碼風格指南

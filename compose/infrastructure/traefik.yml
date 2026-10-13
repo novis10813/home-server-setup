@@ -31,7 +31,8 @@ services:
       - --entrypoints.websecure-external.http3=true
       - --entrypoints.websecure-internal.http3=true
       # HTTP -> HTTPS redirects
-      - --entrypoints.web-external.http.redirections.entrypoint.to=websecure-external
+      # Router forwards WAN 443 -> 444, so redirect to the public port, not the entrypoint's :444
+      - --entrypoints.web-external.http.redirections.entrypoint.to=:443
       - --entrypoints.web-external.http.redirections.entrypoint.scheme=https
       - --entrypoints.web-external.http.redirections.entrypoint.permanent=true
       - --entrypoints.web-internal.http.redirections.entrypoint.to=websecure-internal
@@ -87,9 +88,11 @@ services:
       - "81:81"
       - "443:443"
       - "444:444"
-      - "25565:25565"
-      - "25577:25577/udp"
-      - "${TRAEFIK_PORT:-8080}:8080"
+      # Minecraft (disabled while server is not running; uncomment to re-enable)
+      # - "25565:25565"
+      # - "25577:25577/udp"
+      # Insecure API/Dashboard: host-local only (Prometheus scrapes traefik:8080 via t3_proxy)
+      - "127.0.0.1:${TRAEFIK_PORT:-8080}:8080"
     volumes:
       - ${DOCKERDIR}/appdata/traefik/rules:/rules:ro
       - ${DOCKERDIR}/appdata/traefik/acme/acme.json:/acme.json

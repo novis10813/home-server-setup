@@ -24,6 +24,8 @@
 | `minecraft-velocity` | 玩家入口、正版驗證、語音代理 | TCP 25565、UDP 25577（皆經 Traefik） | `t3_proxy`、`minecraft_internal` |
 | `minecraft` | Fabric 後端、語音終端 | 不對外暴露 | `default`（下載依賴）、`minecraft_internal`（與 Velocity 通訊） |
 
+> 目前停用中：`compose/infrastructure/traefik.yml` 已註解 `25565`/`25577` 埠映射（entrypoint 保留）。重新啟用時取消註解並重建 Traefik，Router 也需重新轉發這兩個埠。
+
 `minecraft_internal` 設為 `internal: true`，後端 TCP 25565 不會經由 Docker bridge 對外暴露。
 後端也不再加入 `t3_proxy`，Simple Voice Chat 的 UDP 僅需對外開在 Velocity proxy。
 另外 backend 仍保留 compose 預設 `default` bridge 網路，僅用於容器啟動時對外下載 Fabric loader / mods；因為沒有 `ports:` 映射，依然不會直接對外提供服務。
