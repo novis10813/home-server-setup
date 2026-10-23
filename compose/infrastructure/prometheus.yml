@@ -23,6 +23,8 @@ services:
       - --web.console.templates=/usr/share/prometheus/consoles
       - --web.enable-lifecycle  # 允許透過 API 重載設定
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DOCKERDIR}/appdata/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - ${DOCKERDIR}/appdata/prometheus/rules:/etc/prometheus/rules:ro
       - ${DATADIR}/prometheus:/prometheus

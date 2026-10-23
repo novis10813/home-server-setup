@@ -13,9 +13,16 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
+      # site-packages/certifi 不掛載：HA 啟動安裝整合套件時 uv 會升級 certifi，掛載會讓安裝失敗
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/usr/local/lib/python3.14/site-packages/pip/_vendor/certifi/cacert.pem:ro
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/usr/share/ncat/ca-bundle.crt:ro
       - ${DATADIR}/homeassistant:/config
       - /etc/localtime:/etc/localtime:ro
     environment:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - UV_NATIVE_TLS=true
       - TZ=${TZ}
 
     cap_add:

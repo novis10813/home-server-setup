@@ -58,6 +58,8 @@ services:
     networks:
       - default
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/usr/local/lib/python3.13/site-packages/pip/_vendor/certifi/cacert.pem:ro
       - ${DATADIR}/immich/model-cache:/cache
     environment:
       - TZ=${TZ}
@@ -91,6 +93,8 @@ services:
     networks:
       - default
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DATADIR}/immich/postgres:/var/lib/postgresql/data
     environment:
       - TZ=${TZ}

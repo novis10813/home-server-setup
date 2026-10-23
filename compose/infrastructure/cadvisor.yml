@@ -19,6 +19,8 @@ services:
     devices:
       - /dev/kmsg:/dev/kmsg
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - /:/rootfs:ro
       - /var/run:/var/run:ro
       - /sys:/sys:ro

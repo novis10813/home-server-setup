@@ -15,6 +15,8 @@ services:
       socket_proxy:
         ipv4_address: 192.168.91.254
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - "/var/run/docker.sock:/var/run/docker.sock"
     read_only: true
     tmpfs:

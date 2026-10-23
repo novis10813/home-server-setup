@@ -22,6 +22,8 @@ services:
       - t3_proxy
     user: "472:472"  # Grafana 官方建議的 UID:GID
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DATADIR}/grafana:/var/lib/grafana
       - ${DOCKERDIR}/appdata/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources:ro
       - ${DOCKERDIR}/appdata/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards:ro

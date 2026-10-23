@@ -14,6 +14,9 @@ services:
     networks:
       - t3_proxy
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/app/.venv/lib/python3.14/site-packages/certifi/cacert.pem:ro
       - ${DATADIR}/shelfmark:/config
       - ${DATADIR}/calibre/cwa-ingest:/books
       - ${DATADIR}/calibre/calibre-web-config/app.db:/cwa-config/app.db:ro

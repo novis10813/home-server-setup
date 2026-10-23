@@ -14,6 +14,8 @@ services:
       - homestack
       - t3_proxy
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - /etc/localtime:/etc/localtime:ro
       - ${DATADIR}/minio:/data
     env_file:

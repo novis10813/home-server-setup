@@ -94,6 +94,8 @@ services:
       # Insecure API/Dashboard: host-local only (Prometheus scrapes traefik:8080 via t3_proxy)
       - "127.0.0.1:${TRAEFIK_PORT:-8080}:8080"
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DOCKERDIR}/appdata/traefik/rules:/rules:ro
       - ${DOCKERDIR}/appdata/traefik/acme/acme.json:/acme.json
       - ${DOCKERDIR}/logs/traefik:/logs

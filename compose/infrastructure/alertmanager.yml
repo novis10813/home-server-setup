@@ -20,6 +20,8 @@ services:
       - --storage.path=/alertmanager
       - --web.external-url=https://alertmanager.${DOMAINNAME_1}
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DOCKERDIR}/appdata/alertmanager/alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
       - ${DOCKERDIR}/secrets/telegram_bot_token:/run/secrets/telegram_bot_token:ro
       - ${DOCKERDIR}/secrets/discord_webhook_url:/run/secrets/discord_webhook_url:ro

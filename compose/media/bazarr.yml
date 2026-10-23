@@ -12,6 +12,10 @@ services:
       - default
       - t3_proxy
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/app/bazarr/bin/libs/certifi/cacert.pem:ro
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/lsiopy/lib/python3.12/site-packages/pip/_vendor/certifi/cacert.pem:ro
       - ${DATADIR}/bazarr:/config
       - ${DATADIR}/media:/data/media
       - /etc/localtime:/etc/localtime:ro

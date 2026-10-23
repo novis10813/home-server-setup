@@ -14,12 +14,17 @@ services:
     networks:
       - t3_proxy
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DATADIR}/code-server/config:/config
       - ${DOCKERDIR}:/config/workspace/docker
       - /mnt/raid1:/config/workspace/raid1
       - /home/novis:/config/workspace/home
       - /etc/localtime:/etc/localtime:ro
     environment:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - NODE_OPTIONS=--use-openssl-ca
+      - SSL_CERT_FILE=/etc/ssl/certs/ca-certificates.crt
       - PUID=${PUID:-1000}
       - PGID=${PGID:-1000}
       - TZ=${TZ}

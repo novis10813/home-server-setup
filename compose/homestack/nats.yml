@@ -12,6 +12,8 @@ services:
     networks:
       - t3_proxy
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
       - ${DOCKERDIR}/appdata/nats/nats-server.conf:/nats-server.conf:ro
       - ${DATADIR}/nats:/data
       - /etc/localtime:/etc/localtime:ro

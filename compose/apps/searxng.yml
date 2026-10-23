@@ -12,6 +12,9 @@ services:
     security_opt:
       - no-new-privileges:true
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
+      - ${DOCKERDIR}/appdata/ca-certificates/certs/ca-certificates.crt:/usr/local/searxng/.venv/lib/python3.14/site-packages/certifi/cacert.pem:ro
       - ${DOCKERDIR}/appdata/searxng:/etc/searxng:rw
       - ${DOCKERDIR}/appdata/searxng/wikidata.py:/usr/local/searxng/searx/engines/wikidata.py:ro
       - ${DOCKERDIR}/appdata/searxng/engines_cache:/usr/local/searxng/searx/engines/__pycache__:rw

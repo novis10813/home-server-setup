@@ -19,6 +19,8 @@ services:
       - "traefik.http.routers.questdb-rtr.service=questdb-svc"
       - "traefik.http.services.questdb-svc.loadbalancer.server.port=9000"
     volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/java/cacerts:/app/lib/security/cacerts:ro
       - ${DOCKERDIR}/appdata/questdb/server.conf:/var/lib/questdb/conf/server.conf:ro
       - ${DATADIR}/questdb:/var/lib/questdb/db
       - /etc/localtime:/etc/localtime:ro
