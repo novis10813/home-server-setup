@@ -1,10 +1,11 @@
 # Jellyseerr - Media request management for Jellyfin
-# https://docs.linuxserver.io/images/docker-jellyseerr/
+# 上游 Jellyseerr 已併入 Seerr：https://docs.seerr.dev/migration-guide/
+# Seerr 以 node 使用者（UID 1000）執行，${DATADIR}/jellyseerr 需為 1000:1000 擁有
 
 services:
   jellyseerr:
     container_name: jellyseerr
-    image: ghcr.io/fallenbagel/jellyseerr:latest
+    image: ghcr.io/seerr-team/seerr:latest
     init: true
     restart: unless-stopped
     security_opt:
