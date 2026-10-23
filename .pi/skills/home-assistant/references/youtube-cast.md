@@ -86,6 +86,42 @@ data:
 
 **注意**：`sensor.sapporo_247_live_video` 已無自動化使用，但**保留**作為 24/7 直播偵測模式的活範例（持續驗證中，要對任何 24/7 頻道做偵測直接抄這個 sensor 改 URL）；成本 = 每 10 分鐘抓一次 YouTube 頁面。
 
+## Dashboard「YouTube 直播」分頁（客廳 dashboard 第二頁）
+
+路徑 `dashboard-default` 的 `live` view：一列 `horizontal-stack`，每個頻道一張
+`vertical-stack`（markdown 縮圖 + mushroom-template-card），下方保留 `media-control`。
+
+- 縮圖：markdown 卡內以 template 組 `https://i.ytimg.com/vi/<sensor 值>/hqdefault_live.jpg`
+- 點擊：`script.turn_on` → `script.tv_cast_live`，變數 `sensor_entity`（存 video ID 的 sensor）
+- `script.tv_cast_live`（`scripts.yaml`）：sensor 為 unknown/unavailable 時直接結束；否則呼叫
+  `script.tv_cast_youtube`，最多重試 3 次（每次等 15 秒確認 `media_content_id`）
+- 現有頻道：札幌 24/7（`sensor.sapporo_247_live_video`）、朝日新聞 札幌 LIVE
+  （`sensor.asahi_sapporo_live_video`，channel `UCaHr0a1x8zmQ1dxanCeuesA`）
+
+**限制**：頻道 `/live` 頁只回傳「其中一條」直播，所以同頻道有多條直播時，卡片播的不一定是你貼的那個連結。
+要固定播某一條就不能用 sensor，得直接寫死 video ID（直播結束後要手動換）。
+
+### 新增一個頻道
+
+1. 取 channel ID：`curl -s -A "Mozilla/5.0" "https://www.youtube.com/watch?v=<id>" | grep -o '"channelId":"[^"]*"' | head -1`
+2. 在 `configuration.yaml` 的 `rest:` 下加一組 sensor（複製既有的，改 `resource` URL、`name`、`unique_id`，
+   `scan_interval` 建議 10 分鐘）。
+3. `docker cp` 回容器後 **`docker restart home-assistant`**（新增 YAML 整合只能重啟，見 SKILL.md reload 矩陣），
+   確認 log 無 `Invalid config`，且 `sensor.<name>` 有 video ID。
+4. 複製 dashboard 的一張 `vertical-stack`，把 sensor entity_id 與標題換掉。
+
+### 改 dashboard 的方法
+
+dashboard 存在 `/config/.storage/lovelace.dashboard_default`（UI storage 模式），
+**不要直接改檔案**。用 WS `lovelace/config/save`（`url_path` 為 `dashboard-default`）：先
+`docker cp` 備份檔案，讀出 JSON 的 `data.config`，改完後整份送出：
+
+```bash
+node scripts/ha_ws.mjs <ha_url> <token> '[{"type":"lovelace/config/save","url_path":"dashboard-default","config":{...整份 config...}}]'
+```
+
+`lovelace/config`（讀）在 storage 模式下也要帶 `url_path`，不帶會回 `config_not_found`。
+
 ## 排障
 
 - TV `media_title` 常回報 `None`（cast status 延遲）——**以實體電視畫面為準**

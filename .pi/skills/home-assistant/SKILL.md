@@ -65,6 +65,8 @@ call_service 欄位、automation.trigger、choose default、regex filter 改名�
 | `script.tv_cast_youtube` | Cast 播 YouTube（`video_id` 參數）；首次常失敗需重試，用 `script.turn_on` 呼叫 |
 | `sensor.yutinghao_live_video` | 財經皓角（@yutinghaofinance）直播 video ID 偵測（非直播 = unknown） |
 | `sensor.sapporo_247_live_video` | 札幌 24/7 直播 video ID 偵測 |
+| `sensor.asahi_sapporo_live_video` | 朝日新聞 札幌 LIVE 直播 video ID 偵測（非直播 = unknown） |
+| `script.tv_cast_live` | 依 sensor（`sensor_entity`）的 video ID Cast 到電視；dashboard「YouTube 直播」分頁使用，見 `references/youtube-cast.md` |
 | `automation.zao_shang_kan_zha_huang_zhi_bo` | 週一~五 8:30 開燈開 TV + Cast 播財經直播（僅 time trigger，週末不觸發；2026-09 已移除 state trigger 與札幌 fallback；手動 Trigger = 完整 dry run） |
 
 entity ID 是 friendly name 的 slug，**改過名字就變**——用 API 查，不要憑記憶。
