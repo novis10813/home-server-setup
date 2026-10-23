@@ -71,6 +71,7 @@ entity ID 是 friendly name 的 slug，**改過名字就變**——用 API 查�
 
 ## 其他
 
+- 涉及電視 ADB、桌面、截圖或韌體時，先讀 `references/android-tv.md`（設備查驗、已知限制、還原與操作邊界）
 - YouTube / 直播偵測 / cast 播放模式：`references/youtube-cast.md`
 - 網路拓撲、檔案權限、log、http.ban：`references/infrastructure.md`
 - MCP（Pi 內建 MCP + HA mcp_server）與排障：`references/mcp-setup.md`
