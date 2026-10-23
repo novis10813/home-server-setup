@@ -15,6 +15,8 @@ about = {
 }
 
 display_type = ["infobox"]
+# 新版 SearXNG 的 engine traits 含 wikidata 語言清單，未設定會在啟動時報錯
+language_support = True
 
 
 def send_wikidata_query(_query, **_kwargs):
