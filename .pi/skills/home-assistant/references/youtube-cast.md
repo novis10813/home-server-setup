@@ -32,7 +32,7 @@ rest:
 
 - entity ID = name 的 slug：`sensor.yutinghao_live_video`
 - 直播中 = video ID；非直播 = `unknown`
-- 本 instance 現有的：`sensor.yutinghao_live_video`（財經皓角，2 分鐘）、`sensor.sapporo_247_live_video`（札幌 24/7，10 分鐘，channel URL `UCIMs8atP2qoxcfAvhiFlzGQ`）
+- 本 instance 現有的：`sensor.yutinghao_live_video`（財經皓角，2 分鐘，早上 8:30 自動化用）
 
 ## TV 播 YouTube：走 Cast，不要走 Android TV Remote 深層連結
 
@@ -64,8 +64,11 @@ data:
 這是 `requests` 的 HTTPError，**不是 HomeAssistantError，`continue_on_error` 接不住**
 （`helpers/script.py` `_handle_exception`），直接呼叫會中止整個自動化。
 所以自動化用 `script.turn_on`（非阻塞，錯誤留在 script 內）+ `repeat`：
-`wait_template` 等 `state_attr('media_player.ke_ting_dian_shi','media_content_id') == <video_id>`
-15 秒，沒成功就再投，最多 3 次。
+`wait_for_trigger` 等 `tv_cast_youtube_done` 事件 15 秒，沒收到就再投，最多 3 次。
+`script.tv_cast_youtube` 在 `play_media` 成功後才發這個事件（失敗時 `play_media` 拋錯，走不到這步）。
+
+**不要用 `media_content_id` 確認投放成功**（2026-10 實測）：Cast 播 YouTube 時該屬性回報空字串，
+等待永遠逾時 → 每 15 秒重投、共 3 次。使用者在這 45 秒內切到別支影片會被拉回來。
 
 ## 自動化模式（2026-09 簡化版）
 
@@ -84,31 +87,42 @@ data:
 2026-09 依使用者要求移除（週末不觸發、無 24/7 墊場）。若日後直播 ID 發布習慣
 改變（8:30 時仍 unknown），再考慮加回偵測補播。
 
-**注意**：`sensor.sapporo_247_live_video` 已無自動化使用，但**保留**作為 24/7 直播偵測模式的活範例（持續驗證中，要對任何 24/7 頻道做偵測直接抄這個 sensor 改 URL）；成本 = 每 10 分鐘抓一次 YouTube 頁面。
+**注意**：`/live` 偵測只適合「頻道同時只有一條直播」的情況（如財經皓角）。多條直播的頻道改用下一節的 `/streams` 清單。
+
+## 列出頻道所有直播：`/streams` 頁（2026-10）
+
+頻道 `/live` 頁只回傳「其中一條」直播。同頻道同時有多條時（朝日新聞LIVE 同時 11 條），
+`/live` 挑到哪條不可控（2026-10 實測：想看札幌，`/live` 回的是伊丹空港）。
+
+`https://www.youtube.com/channel/<UC...>/streams`（或 `/@handle/streams`）的 `ytInitialData` 內，
+每支影片是一個 `lockupViewModel`（2026-10 已不是 `videoRenderer`），`contentId` = video ID，
+直播中的縮圖帶 `THUMBNAIL_OVERLAY_BADGE_STYLE_LIVE`。一頁約 1.2MB。
+
+實作（HA config 目錄，非版控）：
+
+| 元件 | 位置 | 說明 |
+|------|------|------|
+| `/config/yt_live/yt_live_streams.py` | 腳本 | 參數 = 頻道（`UC...` 或 `@handle`，可多個）；輸出 `{"count","streams":[{channel,id,title}],"errors"}`。單一頻道失敗只記進 `errors` |
+| `sensor.youtube_live_streams` | `configuration.yaml` `command_line:` | 每 10 分鐘跑腳本；state = 直播數，attribute `streams` / `errors` |
+| `input_select.yt_live_stream` | `configuration.yaml` `input_select:` | 下拉選單，選項格式「頻道｜標題前 40 字 [videoID]」 |
+| `automation.youtube_zhi_bo_qing_dan_tong_bu_dao_xia_la_xuan_dan` | `automations.yaml`（id `yt_live_update_options`） | sensor 變動或 HA 啟動時 `input_select.set_options`；目前選擇仍在清單內會被保留 |
+| `script.tv_cast_selected_live` | `scripts.yaml` | 從選項尾端 `[videoID]` 取 ID 投放，失敗最多重試 3 次（每次等 15 秒 `tv_cast_youtube_done` 事件）；取不到 ID（「目前沒有直播」）直接結束 |
+
+video ID 寫在選項文字裡，而不是用 index 對回 sensor，因此 sensor 剛好刷新時也不會播錯。
+
+**新增頻道**：在 `command_line` sensor 的 `command` 尾端加頻道 ID 或 `@handle` → `docker cp` 回容器 →
+`command_line.reload`（WS `call_service`，domain 已載入）。channel ID 取法：
+`curl -s -A "Mozilla/5.0" "https://www.youtube.com/watch?v=<id>" | grep -o '"channelId":"[^"]*"' | head -1`
 
 ## Dashboard「YouTube 直播」分頁（客廳 dashboard 第二頁）
 
-路徑 `dashboard-default` 的 `live` view：一列 `horizontal-stack`，每個頻道一張
-`vertical-stack`（markdown 縮圖 + mushroom-template-card），下方保留 `media-control`。
+路徑 `dashboard-default` 的 `live` view：一個 `vertical-stack`（markdown 縮圖 + entities 卡），下方保留 `media-control`。
 
-- 縮圖：markdown 卡內以 template 組 `https://i.ytimg.com/vi/<sensor 值>/hqdefault_live.jpg`
-- 點擊：`script.turn_on` → `script.tv_cast_live`，變數 `sensor_entity`（存 video ID 的 sensor）
-- `script.tv_cast_live`（`scripts.yaml`）：sensor 為 unknown/unavailable 時直接結束；否則呼叫
-  `script.tv_cast_youtube`，最多重試 3 次（每次等 15 秒確認 `media_content_id`）
-- 現有頻道：札幌 24/7（`sensor.sapporo_247_live_video`）、朝日新聞 札幌 LIVE
-  （`sensor.asahi_sapporo_live_video`，channel `UCaHr0a1x8zmQ1dxanCeuesA`）
-
-**限制**：頻道 `/live` 頁只回傳「其中一條」直播，所以同頻道有多條直播時，卡片播的不一定是你貼的那個連結。
-要固定播某一條就不能用 sensor，得直接寫死 video ID（直播結束後要手動換）。
-
-### 新增一個頻道
-
-1. 取 channel ID：`curl -s -A "Mozilla/5.0" "https://www.youtube.com/watch?v=<id>" | grep -o '"channelId":"[^"]*"' | head -1`
-2. 在 `configuration.yaml` 的 `rest:` 下加一組 sensor（複製既有的，改 `resource` URL、`name`、`unique_id`，
-   `scan_interval` 建議 10 分鐘）。
-3. `docker cp` 回容器後 **`docker restart home-assistant`**（新增 YAML 整合只能重啟，見 SKILL.md reload 矩陣），
-   確認 log 無 `Invalid config`，且 `sensor.<name>` 有 video ID。
-4. 複製 dashboard 的一張 `vertical-stack`，把 sensor entity_id 與標題換掉。
+- 縮圖：markdown 卡以 template 從 `input_select.yt_live_stream` 取 `[videoID]`，組 `https://i.ytimg.com/vi/<id>/hqdefault_live.jpg`
+- entities 卡：`input_select.yt_live_stream`、button row（`script.turn_on` → `script.tv_cast_selected_live`）、`sensor.youtube_live_streams`（直播數）
+- 清單內頻道：Hokkaido Kurashi no Yomimono（`UCIMs8atP2qoxcfAvhiFlzGQ`）、朝日新聞LIVE（`UCaHr0a1x8zmQ1dxanCeuesA`）、
+  台北觀光即時影像 @taipeitravelofficial（`UCJLjpq7pTJRbP3vtx0LxB9Q`）
+- 2026-10 前是每頻道一張卡（REST `/live` sensor + `script.tv_cast_live`），因 `/live` 只回一條而換掉，舊 sensor 與 script 已刪除
 
 ### 改 dashboard 的方法
 
