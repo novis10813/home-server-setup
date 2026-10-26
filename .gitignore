@@ -13,3 +13,5 @@ logs/
 .pi/npm/
 # pi session artifacts（僅本 session 的 review 介面，不入版控）
 .pi/artifacts/
+# pi 背景任務紀錄（執行狀態與輸出，不入版控）
+.pi/tasks/

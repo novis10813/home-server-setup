@@ -38,10 +38,18 @@ groups:
           description: "Service {{ $labels.service }} has {{ printf \"%.1f\" $value }}% 4xx errors."
 
       ### 延遲告警
-      # 排除 Home Assistant (ha-svc)：SSE / 長輪詢 / 重儀表板使 p95 常 >2s，與代理本身品質關聯低。
+      # 排除本質上就慢的服務，與代理本身品質關聯低：
+      #   - ha-svc：SSE / 長輪詢 / 重儀表板使 p95 常 >2s
+      #   - cli-proxy-api-svc：LLM 代理，p50 即 >5s
+      #   - searxng-svc：聚合外部搜尋引擎，p50 約 2s
+      # 5 分鐘內請求數 >= 20 才判斷，避免低流量時單一慢請求就拉高 p95。
       - alert: TraefikHighLatency
         expr: |
-          histogram_quantile(0.95, sum(rate(traefik_service_request_duration_seconds_bucket{service!="ha-svc@docker"}[5m])) by (le, service)) > 2
+          (
+            histogram_quantile(0.95, sum by (le, service) (rate(traefik_service_request_duration_seconds_bucket{service!~"ha-svc@docker|cli-proxy-api-svc@docker|searxng-svc@docker"}[5m]))) > 2
+          )
+          and on (service)
+          sum by (service) (increase(traefik_service_request_duration_seconds_count{service!~"ha-svc@docker|cli-proxy-api-svc@docker|searxng-svc@docker"}[5m])) >= 20
         for: 5m
         labels:
           severity: warning
