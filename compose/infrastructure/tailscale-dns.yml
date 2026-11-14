@@ -1,0 +1,33 @@
+services:
+  tailscale-dns:
+    container_name: tailscale-dns
+    image: coredns/coredns:1.15.0
+    profiles:
+      - all
+      - network
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    command: ["-conf", "/Corefile"]
+    networks:
+      t3_proxy:
+        ipv4_address: 192.168.90.54
+    ports:
+      # 僅綁 Tailscale IP；Pi-hole 的 53 埠改綁 LAN IP，避免衝突
+      - "${TAILSCALE_DNS_IP:-100.99.167.18}:53:53/udp"
+      - "${TAILSCALE_DNS_IP:-100.99.167.18}:53:53/tcp"
+    environment:
+      DOMAINNAME_1: ${DOMAINNAME_1}
+      TAILSCALE_DNS_IP: ${TAILSCALE_DNS_IP:-100.99.167.18}
+    sysctls:
+      # 映像以非 root（65532）執行，需允許綁定 53 埠
+      net.ipv4.ip_unprivileged_port_start: 0
+    volumes:
+      - ${DOCKERDIR}/appdata/tailscale-dns/Corefile:/Corefile:ro
+    depends_on:
+      - pihole
+    deploy:
+      resources:
+        limits:
+          memory: 128m
+          cpus: "0.5"

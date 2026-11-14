@@ -1,0 +1,19 @@
+# Tailscale 專用 DNS：僅監聽 Tailscale IP，供 tailnet 裝置使用
+# 自有網域（含所有子網域）→ 回答本機的 Tailscale IP，流量走 Tailscale 直連 Traefik
+{$DOMAINNAME_1}:53 {
+    template IN A {
+        answer "{{ .Name }} 60 IN A {$TAILSCALE_DNS_IP}"
+    }
+    # 不提供 IPv6，回覆空答案避免 AAAA 查詢落到其他解析器
+    template IN AAAA {
+        rcode NOERROR
+    }
+    errors
+}
+
+# 其他網域 → 轉給 Pi-hole（保留廣告封鎖）
+.:53 {
+    forward . 192.168.90.53
+    cache 30
+    errors
+}

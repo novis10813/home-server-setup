@@ -1,7 +1,7 @@
 services:
   pihole:
     container_name: pihole
-    image: pihole/pihole:latest
+    image: pihole/pihole:2026.10.0
     profiles:
       - all
       - network
@@ -12,8 +12,11 @@ services:
       t3_proxy:
         ipv4_address: 192.168.90.53 # 固定 IP
     ports:
-      - "53:53/tcp"
-      - "53:53/udp"
+      # 只綁 LAN IP 與本機，Tailscale IP 的 53 埠由 tailscale-dns 使用
+      - "${LAN_IP:-192.168.0.13}:53:53/tcp"
+      - "${LAN_IP:-192.168.0.13}:53:53/udp"
+      - "127.0.0.1:53:53/tcp"
+      - "127.0.0.1:53:53/udp"
       # - "67:67/udp" # 如果需要 DHCP
       # - "8053:80/tcp" # 管理介面備用存取
     environment:
@@ -21,6 +24,12 @@ services:
       FTLCONF_webserver_api_password: ${PIHOLE_PASSWORD:-admin}
       FTLCONF_dns_listeningMode: "all"
       FTLCONF_misc_etc_dnsmasq_d: "true"
+      FTLCONF_database_maxDBdays: "30"
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+          cpus: "1.0"
     volumes:
       # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
       - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
