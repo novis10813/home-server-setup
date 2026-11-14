@@ -53,6 +53,7 @@ services:
       - homestack
     env_file:
       - ${DOCKERDIR}/secrets/minio.env
+      - ${DOCKERDIR}/secrets/market-data-backup.env
     depends_on:
       - minio
     entrypoint: ["/bin/sh", "-eu", "-c"]
@@ -128,6 +129,35 @@ services:
         mc admin policy create local nautilus-readonly /tmp/nautilus-readonly-policy.json || mc admin policy info local nautilus-readonly >/dev/null
         mc admin user add local "$${MINIO_CATALOG_READ_ACCESS_KEY}" "$${MINIO_CATALOG_READ_SECRET_KEY}" || true
         mc admin policy attach local nautilus-readonly --user "$${MINIO_CATALOG_READ_ACCESS_KEY}"
+        cat > /tmp/market-data-readonly-policy.json <<'EOF'
+        {
+          "Version": "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetBucketLocation",
+                "s3:ListBucket"
+              ],
+              "Resource": [
+                "arn:aws:s3:::market-data"
+              ]
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "s3:GetObject"
+              ],
+              "Resource": [
+                "arn:aws:s3:::market-data/*"
+              ]
+            }
+          ]
+        }
+        EOF
+        mc admin policy create local market-data-readonly /tmp/market-data-readonly-policy.json || mc admin policy info local market-data-readonly >/dev/null
+        mc admin user add local "$${MARKET_DATA_BACKUP_ACCESS_KEY}" "$${MARKET_DATA_BACKUP_SECRET_KEY}" || true
+        mc admin policy attach local market-data-readonly --user "$${MARKET_DATA_BACKUP_ACCESS_KEY}"
 
 networks:
   t3_proxy:
