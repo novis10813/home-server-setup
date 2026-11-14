@@ -35,7 +35,7 @@
 
 | Compose 檔案 | 職責 | 說明 |
 |-------------|------|------|
-| `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Pi-hole + Prometheus + Grafana + Node Exporter + cAdvisor |
+| `docker-compose-infrastructure.yml` | 網關（Gateway）+ 監控 | Traefik + Socket Proxy + OAuth + Pi-hole + Tailscale DNS + Prometheus + Grafana + Node Exporter + cAdvisor |
 
 主檔透過 `include` 引入：
 
@@ -43,6 +43,7 @@
 - `compose/infrastructure/traefik.yml`
 - `compose/infrastructure/traefik-forward-auth.yml`
 - `compose/infrastructure/pihole.yml`
+- `compose/infrastructure/tailscale-dns.yml`
 - `compose/infrastructure/prometheus.yml`（profile: monitor）
 - `compose/infrastructure/grafana.yml`（profile: monitor）
 - `compose/infrastructure/node-exporter.yml`（profile: monitor）
@@ -63,6 +64,7 @@
 │       ├── socket-proxy.yml           # Docker API 安全代理
 │       ├── traefik-forward-auth.yml   # OAuth SSO
 │       ├── pihole.yml                 # Pi-hole DNS
+│       ├── tailscale-dns.yml          # Tailscale 專用 DNS（遠端存取）
 │       ├── prometheus.yml             # Prometheus 監控（profile: monitor）
 │       ├── grafana.yml                # Grafana 儀表板（profile: monitor）
 │       ├── node-exporter.yml          # 主機指標（profile: monitor）
@@ -103,6 +105,7 @@
 - Traefik：192.168.90.254（t3_proxy）
 - Socket Proxy：192.168.91.254（socket_proxy）
 - Pi-hole：192.168.90.53（t3_proxy）
+- tailscale-dns：192.168.90.54（t3_proxy）
 
 ### 埠對應
 
@@ -113,7 +116,8 @@
 | 443 | 443 | HTTPS（內部 `websecure-internal`） |
 | 444 | 444 | HTTPS（外部 `websecure-external`） |
 | `127.0.0.1:${TRAEFIK_PORT}` | 8080 | Traefik Dashboard API（僅主機本機） |
-| 53 | 53 | Pi-hole DNS（TCP/UDP） |
+| `${LAN_IP}:53`、`127.0.0.1:53` | 53 | Pi-hole DNS（TCP/UDP） |
+| `${TAILSCALE_DNS_IP}:53` | 53 | Tailscale 專用 DNS（TCP/UDP） |
 | 8053 | 80 | Pi-hole Web 備用 |
 
 HTTP 對外（81）與對內（80）皆會強制導向 HTTPS。對外（81）導向 `:443`，因 Router 將 WAN 443 轉發至 444。

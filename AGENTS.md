@@ -13,7 +13,8 @@
 - **安全代理**：LinuxServer Socket Proxy（Docker API 安全存取）
 - **SSO 認證**：traefik-forward-auth（OAuth 2.0）
 - **憑證管理**：Let's Encrypt + Cloudflare DNS Challenge
-- **LAN DNS**：Pi-hole（主機埠 53）
+- **LAN DNS**：Pi-hole（主機埠 53，綁 LAN IP 與 127.0.0.1）
+- **遠端 DNS**：tailscale-dns（CoreDNS，綁 Tailscale IP 的 53 埠，供 tailnet 裝置存取內部服務）
 - **監控**：Prometheus v3.9.1 + Grafana 12.3.2 + Grafana Loki 3.5.7 + Promtail 3.5.7 + Node Exporter v1.9.1 + cAdvisor v0.52.1 + Alertmanager v0.32.0（使用 `profiles: [monitor]`）
 
 ### 設計邏輯
@@ -54,6 +55,7 @@
 │   │   ├── socket-proxy.yml            # Docker API 安全代理
 │   │   ├── traefik-forward-auth.yml    # OAuth SSO 服務
 │   │   ├── pihole.yml                  # Pi-hole LAN DNS（主機埠 53）
+│   │   ├── tailscale-dns.yml           # Tailscale 專用 DNS（綁 Tailscale IP:53）
 │   │   ├── cron.yml                    # 主機 cron 任務（profile: network）
 │   │   ├── prometheus.yml              # Prometheus 監控（profile: monitor）
 │   │   ├── alertmanager.yml            # Alertmanager 警報路由（profile: monitor）
@@ -115,7 +117,7 @@
 │   │   └── provisioning/datasources/  # Grafana datasource files (e.g. Loki)
 │   ├── nats/
 │   │   └── nats-server.conf           # NATS 主設定（無認證，依賴 Docker 網路隔離）
-│   └── <service>/                     # 其他服務手寫設定（couchdb、cron、crypto-relay、hugo、minecraft、questdb、searxng、velocity）
+│   └── <service>/                     # 其他服務手寫設定（couchdb、cron、crypto-relay、hugo、minecraft、questdb、searxng、tailscale-dns、velocity）
 ├── secrets/                            # 敏感檔案（勿提交版控）
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
@@ -166,7 +168,7 @@ htpasswd -nb username password > secrets/basic_auth_credentials
 - `80` / `81`：HTTP（內部 / 外部）
 - `443` / `444`：HTTPS（內部 / 外部）
 - `127.0.0.1:${TRAEFIK_PORT}`：Traefik API / Dashboard（insecure，僅主機本機可存取）
-- `53`（tcp/udp）：Pi-hole LAN DNS
+- `53`（tcp/udp）：Pi-hole LAN DNS（綁 `${LAN_IP}` 與 `127.0.0.1`）；`${TAILSCALE_DNS_IP}:53`：tailscale-dns
 - `6881`（tcp/udp）：qBittorrent torrent peer
 - `25565`（tcp）/ `25577`（udp）：Minecraft Velocity / Fabric 後端（經 Traefik 容器發布；目前已在 `traefik.yml` 註解停用）
 - `8010`：PAT coordinator（綁定 `${PAT_TAILSCALE_IP}`，預設 `127.0.0.1`）

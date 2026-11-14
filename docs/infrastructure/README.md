@@ -6,6 +6,7 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 - **Socket Proxy** — Docker API 安全代理，Traefik 透過 `tcp://socket-proxy:2375` 取得容器資訊
 - **traefik-forward-auth** — OAuth 2.0 SSO，供 Traefik 的 forwardAuth 使用
 - **Pi-hole** — DNS 與廣告攔截
+- **Tailscale DNS** — 遠端（tailnet）裝置專用 DNS，回答 Tailscale IP 以存取內部服務
 - **Prometheus** — 指標收集與儲存（profile: `monitor`，需以 `--profile monitor` 啟動）
 - **Grafana** — 監控儀表板（profile: `monitor`）
 - **Node Exporter** — 主機層級指標收集（profile: `monitor`）
@@ -19,7 +20,7 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 |------|------|
 | [架構與目錄](architecture.md) | 技術棧、設計邏輯、目錄結構、網路與埠 |
 | [設定與環境](configuration.md) | 環境變數、Secrets、啟動前準備 |
-| [服務說明](services.md) | 各服務定義（Traefik、Socket Proxy、OAuth、Pi-hole） |
+| [服務說明](services.md) | 各服務定義（Traefik、Socket Proxy、OAuth、Pi-hole、Tailscale DNS） |
 | [Traefik 規則](traefik-rules.md) | 動態規則、TLS、中介軟體鏈 |
 | [操作與維護](operations.md) | 常用指令、維護、疑難排解 |
 

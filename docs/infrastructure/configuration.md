@@ -14,6 +14,8 @@
 | `DOMAINNAME_1` | 主要網域；Dashboard 為 `traefik.<DOMAINNAME_1>` | `example.com` |
 | `TRAEFIK_PORT` | Traefik API/Dashboard（insecure）主機埠（僅綁定 `127.0.0.1`） | `8080` |
 | `GOOGLE_OAUTH_CLIENT_ID` | Google OAuth Client ID（可放 .env） | `xxxx.apps.googleusercontent.com` |
+| `LAN_IP` | Pi-hole 53 埠綁定的 LAN IP（預設 `192.168.0.13`） | `192.168.0.13` |
+| `TAILSCALE_DNS_IP` | tailscale-dns 綁定的 Tailscale IP（預設 `100.99.167.18`），需與本機 Tailscale IP 一致 | `100.x.x.x` |
 | `HOST_IP` | 主機 IP（Pi-hole 等用途，建議與本機 IP 一致） | `192.168.x.x` |
 
 Google OAuth Client Secret 由 `secrets/google_oauth_client_secret` 管理，不要寫入 `.env`。

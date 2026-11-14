@@ -131,6 +131,15 @@ docker compose -f docker-compose-infrastructure.yml up -d
 1. 確認 Pi-hole 已加入 `t3_proxy` 且 IP 為 192.168.90.53（或與規則一致）。
 2. 檢查 `${DATADIR}/pihole/` 權限與掛載。
 3. 若經 Traefik 存取，確認 `pihole.<DOMAINNAME_1>` 的 router 與 middleware 設定正確。
+4. Pi-hole 剛重建或重啟時，健康檢查約 30 秒內為 `starting`，期間 Traefik 不會路由它，網頁會暫時回 404。
+
+### Tailscale 裝置無法解析或連不到內部服務
+
+1. 確認容器運行：`docker ps | grep tailscale-dns`，並測試 `dig @<TAILSCALE_DNS_IP> pihole.<DOMAINNAME_1>` 應回 Tailscale IP。
+2. 容器啟動失敗且出現 `cannot assign requested address`：Docker 比 `tailscaled` 先啟動。檢查 `systemctl show docker.service -p After` 是否含 `tailscaled.service`（見服務說明的開機順序）。
+3. 確認 Tailscale 管理後台的 Global nameserver 為 Tailscale IP，且 Override DNS servers 已開啟。
+4. 瀏覽器若啟用安全 DNS（DoH）指定供應商，會繞過 Tailscale DNS，需改回自動或關閉。
+5. Linux 裝置需執行 `tailscale set --accept-dns=true` 才會使用 Tailscale DNS。
 
 ---
 

@@ -6,7 +6,7 @@
 
 - 定義 **networks**：`default`、`socket_proxy`、`t3_proxy`
 - 定義 **secrets**：`basic_auth_credentials`、`cf_dns_api_token`、`google_oauth_client_id`、`google_oauth_client_secret`、`grafana_admin_password`
-- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、prometheus、grafana、node-exporter、cadvisor
+- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、tailscale-dns、prometheus、grafana、node-exporter、cadvisor
 
 ---
 
@@ -62,14 +62,45 @@
 ## Pi-hole（DNS）
 
 - **檔案**：`compose/infrastructure/pihole.yml`
-- **映像**：`pihole/pihole:latest`
+- **映像**：`pihole/pihole:2026.10.0`（固定版本，升級時手動調整）
 - **網路**：`t3_proxy`（192.168.90.53）
-- **埠**：53/tcp、53/udp（DNS）；8053→80（Web 備用）。
+- **埠**：53/tcp、53/udp（DNS），只綁 `${LAN_IP:-192.168.0.13}` 與 `127.0.0.1`。不綁 Tailscale IP，該位址的 53 埠由 `tailscale-dns` 使用。
+- **資源限制**：記憶體 512m、CPU 1.0。
 - **資料**：`${DATADIR}/pihole/` → `/etc/pihole`。
 - **Traefik**：
   - `pihole.${DOMAINNAME_1}`：HTTPS、`pihole-redirect`（根路徑→`/admin/`）+ `chain-oauth@file`。
   - HTTP 用 `web-internal` 並以 `chain-no-auth@file` 導向 HTTPS。
-- **環境**：`TZ`、`FTLCONF_webserver_api_password`（預設 `admin`）、`FTLCONF_dns_listeningMode`、`FTLCONF_misc_etc_dnsmasq_d`。
+- **環境**：`TZ`、`FTLCONF_webserver_api_password`（預設 `admin`）、`FTLCONF_dns_listeningMode`、`FTLCONF_misc_etc_dnsmasq_d`、`FTLCONF_database_maxDBdays`（查詢紀錄保留 30 天）。
+- **內部 DNS 覆寫**：`dnsmasq_lines` 設定 `address=/<DOMAINNAME_1>/192.168.0.13`，LAN 內的網域與所有子網域直接解析到本機。
+- **LAN 備援**：路由器 DHCP 的次要 DNS 設為 `192.168.0.1`，本機或 Pi-hole 離線時裝置自動改用路由器解析（僅失去廣告攔截）。
+- **自訂封鎖**：自訂黑名單存於 `${DATADIR}/pihole/gravity.db`，不在版控內。
+
+---
+
+## Tailscale DNS（遠端存取用 DNS）
+
+- **檔案**：`compose/infrastructure/tailscale-dns.yml`、`appdata/tailscale-dns/Corefile`
+- **映像**：`coredns/coredns:1.15.0`
+- **網路**：`t3_proxy`（192.168.90.54）
+- **埠**：`${TAILSCALE_DNS_IP:-100.99.167.18}:53`（tcp/udp），只綁 Tailscale IP。
+- **用途**：讓 tailnet 內的裝置在任何網路（包含與家中網段相同的 `192.168.0.x`）都能連到內部服務。
+  - 自有網域與所有子網域：回答 Tailscale IP（`TAILSCALE_DNS_IP`），流量經 Tailscale 直連 Traefik 內部入口（443）。
+  - 其他網域：轉給 Pi-hole（`192.168.90.53`），保留廣告攔截。
+  - AAAA 查詢回空答案。
+- **資源限制**：記憶體 128m、CPU 0.5。映像以非 root 執行，因此設定 `net.ipv4.ip_unprivileged_port_start=0` 才能綁定 53 埠。
+- **Tailscale 管理後台設定**（不在版控內）：DNS → Nameservers → Global nameserver 設為 Tailscale IP，並開啟 Override DNS servers。Restrict to domain 與 Use with exit node 維持關閉。
+- **為什麼不用 subnet route**：家中 LAN（`192.168.0.0/24`）可能與遠端網路（例如租屋處）使用相同網段，位址衝突時流量會留在本地網路。改用 Tailscale IP 回答，不受任何 LAN 網段影響。
+- **開機順序**：本機的 `tailscaled` 為 systemd 服務（非容器）。Docker 必須在其之後啟動，否則綁定 Tailscale IP 會失敗。設定位於 `/etc/systemd/system/docker.service.d/after-tailscale.conf`（不在版控內）：
+
+  ```ini
+  [Unit]
+  After=tailscaled.service
+  Wants=tailscaled.service
+  ```
+
+  建立後執行 `sudo systemctl daemon-reload`，下次開機生效。
+- **失效行為**：本機或 `tailscale-dns` 離線時，開啟 Override DNS 的遠端裝置無法解析任何網域，需暫時關閉該裝置的 Tailscale。LAN 內不受影響（見 Pi-hole 的 LAN 備援）。
+- **與 Cloudflare 的關係**：公網 DNS 只有根網域一筆記錄，子網域沒有公開記錄。Cloudflare Proxy 只影響根網域的公開網站（SSL/TLS 須為 Full (strict)）。內部服務只能從 LAN 或 Tailscale 存取。
 
 ---
 
