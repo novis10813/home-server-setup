@@ -56,6 +56,7 @@
 │   │   ├── traefik-forward-auth.yml    # OAuth SSO 服務
 │   │   ├── pihole.yml                  # Pi-hole LAN DNS（主機埠 53）
 │   │   ├── tailscale-dns.yml           # Tailscale 專用 DNS（綁 Tailscale IP:53）
+│   │   ├── restic-backup.yml           # Immich 備份到 Google Drive（profile: backup）
 │   │   ├── cron.yml                    # 主機 cron 任務（profile: network）
 │   │   ├── prometheus.yml              # Prometheus 監控（profile: monitor）
 │   │   ├── alertmanager.yml            # Alertmanager 警報路由（profile: monitor）
@@ -117,7 +118,7 @@
 │   │   └── provisioning/datasources/  # Grafana datasource files (e.g. Loki)
 │   ├── nats/
 │   │   └── nats-server.conf           # NATS 主設定（無認證，依賴 Docker 網路隔離）
-│   └── <service>/                     # 其他服務手寫設定（couchdb、cron、crypto-relay、hugo、minecraft、questdb、searxng、tailscale-dns、velocity）
+│   └── <service>/                     # 其他服務手寫設定（couchdb、cron、crypto-relay、hugo、minecraft、questdb、restic-backup、searxng、tailscale-dns、velocity）
 ├── secrets/                            # 敏感檔案（勿提交版控）
 └── logs/
     └── traefik/                        # Traefik 存取日誌與錯誤日誌
@@ -243,6 +244,7 @@ docker compose -f docker-compose-infrastructure.yml up -d
 - 備份 `appdata/traefik/acme/acme.json`（Let's Encrypt 憑證）
 - 備份 `appdata/traefik/rules/`（動態規則）
 - 備份 `.env` 與 `secrets/`
+- Immich 照片與資料庫由 `restic-backup` 每天 03:30 加密備份到 Google Drive（見 `docs/infrastructure/services.md`、`operations.md`）；`.env` 與 `secrets/` 目前尚未納入自動備份
 
 ## 疑難排解
 

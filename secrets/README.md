@@ -9,6 +9,8 @@ Place the following files here (do not commit their contents):
 | `telegram_bot_token` | Alertmanager | Telegram Bot Token for sending alerts. Create via [@BotFather](https://t.me/BotFather). |
 | `discord_webhook_url` | Alertmanager | Discord Webhook URL for sending alerts. Create in Discord channel settings → Integrations → Webhooks. |
 | `cli-proxy-api-config.yaml` | CLIProxyAPI | API proxy configuration, including client API keys. See below. |
+| `restic_password` | restic-backup | Password of the encrypted restic repository on Google Drive. Generate: `openssl rand -base64 32 > secrets/restic_password`. Keep a copy outside this server: losing it makes the backups unreadable. |
+| `rclone/rclone.conf` | restic-backup | rclone config with the `gdrive` remote (OAuth client ID/secret and token). Created with `rclone config`, see `docs/infrastructure/services.md`. Keep the OAuth client ID/secret outside this server. |
 Ensure `basic_auth_credentials` and `cf_dns_api_token` exist before starting the **Infrastructure** stack.
 
 ### Alertmanager (Telegram / Discord)

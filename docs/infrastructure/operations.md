@@ -143,6 +143,39 @@ docker compose -f docker-compose-infrastructure.yml up -d
 
 ---
 
+## 備份（Immich → Google Drive）
+
+以下指令在 `/opt/docker` 執行。
+
+```bash
+# 手動備份（前景執行，可看輸出）
+docker start -a restic-backup
+
+# 查看快照
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  --entrypoint restic restic-backup snapshots
+
+# 檢查倉庫結構；加 --read-data-subset=5% 可抽樣讀取資料驗證
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  --entrypoint restic restic-backup check
+
+# 驗證單一檔案內容（不寫入磁碟）：與原始檔比對 SHA-256
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm -T \
+  --entrypoint restic restic-backup dump latest /source/library/backups/<檔名> | sha256sum
+
+# 還原到指定資料夾
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  -v /tmp/restore:/restore --entrypoint restic restic-backup restore latest --target /restore
+```
+
+- 重新建立容器：`docker compose -f docker-compose-infrastructure.yml --profile backup build restic-backup`，再 `... --profile backup create restic-backup`。
+- 腳本內用迴圈呼叫 `docker compose run` 時，要加 `-T` 並把標準輸入導向 `/dev/null`，否則會讀走迴圈的輸入。
+- 排程確認：`docker exec cron crontab -l`；`appdata/cron/crontab` 只在 `cron` 容器啟動時載入，修改後需 `docker restart cron`。
+- 失敗排查：`docker logs restic-backup`。常見原因是 Google 授權失效（OAuth 同意畫面又回到測試狀態、token 被撤銷）或 `restic_password` 與倉庫不符。
+- 已驗證：首次快照約 52 GiB，`restic check` 無錯誤，抽樣 5 個檔案（含資料庫備份與照片）的 SHA-256 與原始檔一致。**Immich 資料庫的還原流程尚未實測**，實際還原時請依 Immich 官方文件操作。
+
+---
+
 ## 參考資源
 
 - [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)

@@ -7,6 +7,7 @@ Infrastructure 對應 **`docker-compose-infrastructure.yml`**，負責**網關**
 - **traefik-forward-auth** — OAuth 2.0 SSO，供 Traefik 的 forwardAuth 使用
 - **Pi-hole** — DNS 與廣告攔截
 - **Tailscale DNS** — 遠端（tailnet）裝置專用 DNS，回答 Tailscale IP 以存取內部服務
+- **Restic 備份** — Immich 照片與資料庫加密備份到 Google Drive（profile: `backup`，由 cron 觸發）
 - **Prometheus** — 指標收集與儲存（profile: `monitor`，需以 `--profile monitor` 啟動）
 - **Grafana** — 監控儀表板（profile: `monitor`）
 - **Node Exporter** — 主機層級指標收集（profile: `monitor`）

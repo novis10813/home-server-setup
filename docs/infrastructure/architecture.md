@@ -44,6 +44,7 @@
 - `compose/infrastructure/traefik-forward-auth.yml`
 - `compose/infrastructure/pihole.yml`
 - `compose/infrastructure/tailscale-dns.yml`
+- `compose/infrastructure/restic-backup.yml`（profile: backup）
 - `compose/infrastructure/prometheus.yml`（profile: monitor）
 - `compose/infrastructure/grafana.yml`（profile: monitor）
 - `compose/infrastructure/node-exporter.yml`（profile: monitor）
@@ -65,6 +66,7 @@
 │       ├── traefik-forward-auth.yml   # OAuth SSO
 │       ├── pihole.yml                 # Pi-hole DNS
 │       ├── tailscale-dns.yml          # Tailscale 專用 DNS（遠端存取）
+│       ├── restic-backup.yml          # Immich 備份到 Google Drive（profile: backup）
 │       ├── prometheus.yml             # Prometheus 監控（profile: monitor）
 │       ├── grafana.yml                # Grafana 儀表板（profile: monitor）
 │       ├── node-exporter.yml          # 主機指標（profile: monitor）

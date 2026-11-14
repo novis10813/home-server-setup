@@ -6,7 +6,7 @@
 
 - 定義 **networks**：`default`、`socket_proxy`、`t3_proxy`
 - 定義 **secrets**：`basic_auth_credentials`、`cf_dns_api_token`、`google_oauth_client_id`、`google_oauth_client_secret`、`grafana_admin_password`
-- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、tailscale-dns、prometheus、grafana、node-exporter、cadvisor
+- **include** 下列子檔：socket-proxy、traefik、traefik-forward-auth、pihole、tailscale-dns、restic-backup、prometheus、grafana、node-exporter、cadvisor
 
 ---
 
@@ -224,6 +224,39 @@ docker exec grafana /usr/share/grafana/bin/grafana-cli admin reset-admin-passwor
 - **用途**：執行內建的 `crond`，透過 `socket-proxy` 發送安全的 Docker API 請求，定時對特定容器執行重啟、啟動或停止等維護任務，無須掛載宿主機 `/var/run/docker.sock`。
 - **設定**：`${DOCKERDIR}/appdata/cron/crontab` 唯讀掛載至 `/etc/crontabs/root`。
 - **安全性**：啟用 `no-new-privileges:true`，加入最低資源限制，且隔離於業務網路之外，僅連接 `socket_proxy`。
+
+---
+
+## Restic 備份（Immich → Google Drive）
+
+- **檔案**：`compose/infrastructure/restic-backup.yml`、`appdata/restic-backup/Dockerfile`、`appdata/restic-backup/backup.sh`
+- **映像**：`local/restic-backup:0.18.0`（Alpine 3.22 + restic 0.18.0 + rclone，本機建置）
+- **Profile**：`backup`；`restart: "no"`，執行完即結束。
+- **排程**：`cron` 容器每天 03:30（Asia/Taipei）透過 socket-proxy 啟動（見 `appdata/cron/crontab`），在 Immich 02:00 的資料庫備份之後。
+- **備份來源**：`${DATADIR}/immich/library`（唯讀掛載到 `/source/library`）。
+  - 備份：`upload`（照片與影片原始檔）、`backups`（Immich 每日資料庫備份 `.sql.gz`）、`profile`。
+  - 不備份：`thumbs`、`encoded-video`、`model-cache`（Immich 可重新產生）。
+  - 不直接備份 `${DATADIR}/immich/postgres`：那是運行中的資料庫檔案，改用 Immich 自己產生的備份檔。
+- **倉庫**：`rclone:gdrive:restic/immich`（restic 加密，快照式）。
+- **保留策略**：7 份每日、4 份每週、6 份每月；每週日執行 `restic prune` 與 `restic check --read-data-subset=2%`。
+- **Secrets**：`restic_password`（Docker secret，倉庫密碼）、`secrets/rclone/rclone.conf`（`gdrive` remote；以目錄掛載，因 rclone 會回寫更新後的 token）。
+- **固定 hostname**：`restic-backup`，並以 `--host homeserver` 備份，避免容器重建後 restic 找不到上一份快照而重掃所有檔案。
+- **失敗保護**：倉庫不存在或密碼錯誤時腳本直接失敗，不會自動建立新倉庫。
+- **資源限制**：記憶體 1g、CPU 1.0。
+- **沒有失敗通知**：排程失敗（例如授權過期、Drive 已滿）不會主動通知，需查 `docker inspect restic-backup`（`ExitCode`）或 `docker logs restic-backup`。
+
+### Google Drive 授權（建立 remote 時使用）
+
+- 在 Google Cloud Console 建立專案、啟用 Google Drive API，建立類型為「電腦版應用程式」的 OAuth 用戶端 ID。
+- OAuth 同意畫面使用者類型為 External，**必須發佈為正式版**；測試狀態下 token 每 7 天過期，備份會悄悄失敗。
+- 品牌頁面填應用程式名稱、支援信箱、首頁網址、隱私權政策網址（可填同一個首頁網址）與已授權網域。**不要上傳 logo**，上傳 logo 會觸發 Google 的驗證審核。
+- rclone scope 使用 `drive.file`：只能存取該 OAuth 用戶端自己建立的檔案。因此 **OAuth 用戶端 ID 與密碼必須另外保存，且不可刪除該 Google Cloud 專案**；換用其他用戶端看不到既有的備份倉庫。
+- 伺服器沒有瀏覽器，建立 remote 時選「不使用瀏覽器自動授權」，改在有瀏覽器的電腦執行 `rclone authorize "drive" "..."`，再把 token 貼回。
+
+### 不在備份內、需另外保存的項目
+
+- 倉庫密碼 `secrets/restic_password`：遺失即無法解開備份，且不能只存放在這台伺服器。
+- `secrets/rclone/rclone.conf` 內的 OAuth 用戶端 ID 與密碼。
 
 ---
 
