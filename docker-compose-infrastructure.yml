@@ -40,6 +40,8 @@ secrets:
     file: ${DOCKERDIR}/secrets/google_oauth_client_secret
   grafana_admin_password:
     file: ${DOCKERDIR}/secrets/grafana_admin_password
+  restic_password:
+    file: ${DOCKERDIR}/secrets/restic_password
 
 ########################### INCLUDES
 include:
@@ -49,6 +51,7 @@ include:
   - compose/infrastructure/pihole.yml
   - compose/infrastructure/tailscale-dns.yml
   - compose/infrastructure/cron.yml
+  - compose/infrastructure/restic-backup.yml
   # Monitoring (profile: monitor)
   - compose/infrastructure/prometheus.yml
   - compose/infrastructure/alertmanager.yml

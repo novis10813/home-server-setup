@@ -1,0 +1,40 @@
+# restic-backup — Immich 照片與資料庫備份到 Google Drive（加密、快照）
+# 由 cron 容器透過 socket-proxy 觸發（見 appdata/cron/crontab），執行完即結束
+# 建立容器（不會執行備份）：
+#   docker compose -f docker-compose-infrastructure.yml --profile backup build restic-backup
+#   docker compose -f docker-compose-infrastructure.yml --profile backup create restic-backup
+# 手動執行：docker start -a restic-backup
+
+services:
+  restic-backup:
+    container_name: restic-backup
+    build:
+      context: ${DOCKERDIR}/appdata/restic-backup
+    image: local/restic-backup:0.18.0
+    profiles:
+      - backup
+    restart: "no"
+    hostname: restic-backup # 固定主機名稱，避免每次重建容器後 restic 找不到上一份快照
+    security_opt:
+      - no-new-privileges:true
+    secrets:
+      - restic_password
+    environment:
+      - TZ=${TZ:-UTC}
+      - RESTIC_REPOSITORY=rclone:gdrive:restic/immich
+      - RESTIC_PASSWORD_FILE=/run/secrets/restic_password
+      - RCLONE_CONFIG=/config/rclone/rclone.conf
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - ${DATADIR}/immich/library:/source/library:ro
+      - ${DOCKERDIR}/appdata/restic-backup/backup.sh:/backup.sh:ro
+      # rclone 會回寫更新後的 token，需用目錄掛載（單檔掛載無法原子取代）
+      - ${DOCKERDIR}/secrets/rclone:/config/rclone
+      # 快取資料夾不存在時由 Docker 自動建立
+      - ${DATADIR}/restic-backup/cache:/root/.cache/restic
+    command: ["/bin/sh", "/backup.sh"]
+    deploy:
+      resources:
+        limits:
+          memory: 1g
+          cpus: "1.0"
