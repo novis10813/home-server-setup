@@ -1,4 +1,4 @@
-# restic-backup — Immich 照片與資料庫備份到 Google Drive（加密、快照）
+# restic-backup — Immich 照片與資料庫、各服務設定備份到 Google Drive（加密、快照）
 # 由 cron 容器透過 socket-proxy 觸發（見 appdata/cron/crontab），執行完即結束
 # 建立容器（不會執行備份）：
 #   docker compose -f docker-compose-infrastructure.yml --profile backup build restic-backup
@@ -27,6 +27,15 @@ services:
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${DATADIR}/immich/library:/source/library:ro
+      # 設定備份來源（唯讀；實際備份的路徑與排除規則見 backup.sh）
+      - ${DOCKERDIR}:/source/docker:ro
+      - ${DATADIR}/homeassistant:/source/data/homeassistant:ro
+      - ${DATADIR}/pihole:/source/data/pihole:ro
+      - ${DATADIR}/grafana:/source/data/grafana:ro
+      - ${DATADIR}/sonarr:/source/data/sonarr:ro
+      - ${DATADIR}/radarr:/source/data/radarr:ro
+      - ${DATADIR}/prowlarr:/source/data/prowlarr:ro
+      - ${DATADIR}/jellyseerr:/source/data/jellyseerr:ro
       - ${DOCKERDIR}/appdata/restic-backup/backup.sh:/backup.sh:ro
       # rclone 會回寫更新後的 token，需用目錄掛載（單檔掛載無法原子取代）
       - ${DOCKERDIR}/secrets/rclone:/config/rclone
