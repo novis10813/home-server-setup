@@ -3,3 +3,6 @@
 
 # 每日 09:00 Asia/Taipei 啟動 Nautilus catalog builder（UTC 日結束後 1 小時）
 0 9 * * * wget --post-data="" -qO- http://socket-proxy:2375/containers/nautilus-catalog-builder/start
+
+# 每日 03:30 Asia/Taipei 備份 Immich 到 Google Drive（Immich 於 02:00 產生資料庫備份）
+30 3 * * * wget --post-data="" -qO- http://socket-proxy:2375/containers/restic-backup/start
