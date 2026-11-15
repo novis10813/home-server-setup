@@ -25,14 +25,16 @@ services:
       - TZ=${TZ}
     labels:
       - "traefik.enable=true"
+      ## Middlewares (允許 Home Assistant 子網域 iframe 嵌入)
+      - "traefik.http.middlewares.jellyseerr-frame.headers.contentSecurityPolicy=frame-ancestors 'self' https://ha.${DOMAINNAME_1}"
       ## HTTP Router
       - "traefik.http.routers.jellyseerr-rtr-http.entrypoints=web-internal"
       - "traefik.http.routers.jellyseerr-rtr-http.rule=Host(`jellyseerr.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.jellyseerr-rtr-http.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.jellyseerr-rtr-http.middlewares=chain-jellyseerr@file,jellyseerr-frame@docker"
       ## HTTPS Router
       - "traefik.http.routers.jellyseerr-rtr.entrypoints=websecure-internal"
       - "traefik.http.routers.jellyseerr-rtr.rule=Host(`jellyseerr.${DOMAINNAME_1}`)"
-      - "traefik.http.routers.jellyseerr-rtr.middlewares=chain-no-auth@file"
+      - "traefik.http.routers.jellyseerr-rtr.middlewares=chain-jellyseerr@file,jellyseerr-frame@docker"
       ## Service
       - "traefik.http.routers.jellyseerr-rtr.service=jellyseerr-svc"
       - "traefik.http.services.jellyseerr-svc.loadbalancer.server.port=5055"
