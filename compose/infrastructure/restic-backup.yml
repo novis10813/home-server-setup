@@ -51,6 +51,8 @@ services:
       - ${DATADIR}/restic-backup/cache:/root/.cache/restic
       # market-data 暫存區：rclone 從 MinIO 增量複製到此（約 33 GB，只增不刪），再由 restic 打包上傳
       - ${DATADIR}/restic-backup/market-data-staging:/staging
+      # Prometheus textfile collector 指標輸出（供 node-exporter 讀取）
+      - ${DATADIR}/restic-backup/metrics:/metrics
     command: ["/bin/sh", "/backup.sh"]
     deploy:
       resources:

@@ -176,6 +176,155 @@ docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
 
 ---
 
+## 災難復原（Disaster Recovery）
+
+整台主機或系統硬碟損毀時，透過 **GitHub（Compose 與設定檔）＋ 離線保存的 Bootstrap 憑證 ＋ Google Drive（三個 `restic` 倉庫）** 重建環境。
+
+### 事前準備（必須離線保存在密碼管理器）
+
+- `secrets/restic_password`
+- `secrets/rclone/rclone.conf`（內含 Google OAuth `client_id`、`client_secret`、`refresh_token`；若 token 過期可用同一組憑證執行 `rclone config reconnect gdrive:` 重新授權）
+
+### Step 1：重建主機環境與 OS 前置設定
+
+1. 安裝 `docker`、`docker-compose-plugin`、`tailscale`、`git`，並建立對應的使用者與 `homeserver` 群組（對齊 `.env` 的 `PUID` / `PGID`）。
+2. 設定 Docker 在 `tailscaled` 之後啟動（否則綁定 `${TAILSCALE_DNS_IP}:53` 的 `tailscale-dns` 與 `${PAT_TAILSCALE_IP}:8010` 的 `pat` 開機會因 Tailscale 介面尚未就緒而失敗）：
+
+```bash
+sudo mkdir -p /etc/systemd/system/docker.service.d
+sudo tee /etc/systemd/system/docker.service.d/after-tailscale.conf <<'EOF'
+[Unit]
+After=tailscaled.service
+Wants=tailscaled.service
+EOF
+sudo systemctl daemon-reload
+```
+
+3. 登入 Tailscale（`sudo tailscale up`）。若新系統的 `systemd-resolved` 佔用 53 埠導致 `pihole` 無法綁定，於 `/etc/systemd/resolved.conf` 設定 `DNSStubListener=no` 後重啟 `systemd-resolved`。
+4. **確認資料磁碟**：若只是系統碟損毀、`/mnt/raid1`（`DATADIR`）資料碟完好，先掛載進 `/etc/fstab`，即可跳過 Step 5 與 Step 6 的大量下載還原。
+5. Clone repo 與建立暫時環境：
+
+```bash
+git clone <your-repo-url> /opt/docker
+cd /opt/docker
+
+# 建立暫時 .env 供 restic-backup 使用（完整 .env 稍後會從備份還原）
+cat > .env <<'EOF'
+DOCKERDIR=/opt/docker
+DATADIR=/mnt/raid1
+TZ=Asia/Taipei
+EOF
+
+# 建立 restic-backup 依賴的外部網路（其餘 t3_proxy / socket_proxy / ha_macvlan 由 infrastructure compose 建立）
+docker network create homestack
+```
+
+### Step 2：放回 Bootstrap 憑證並驗證備份倉庫
+
+```bash
+mkdir -p secrets/rclone
+# 將離線保存的內容寫入 secrets/restic_password 與 secrets/rclone/rclone.conf
+chmod 600 secrets/restic_password secrets/rclone/rclone.conf
+
+# 需要空的 market-data-backup.env 才能啟動 restic-backup（實際值稍後從 config 還原）
+touch secrets/market-data-backup.env
+
+docker compose -f docker-compose-infrastructure.yml --profile backup build restic-backup
+
+# 驗證能正常列出 config 倉庫快照
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  -e RESTIC_REPOSITORY=rclone:gdrive:restic/config \
+  --entrypoint restic restic-backup snapshots
+```
+
+### Step 3：還原設定、Secrets 與服務資料（`restic/config`）
+
+```bash
+mkdir -p /tmp/restore-config
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  -e RESTIC_REPOSITORY=rclone:gdrive:restic/config \
+  -v /tmp/restore-config:/restore \
+  --entrypoint restic restic-backup restore latest --target /restore
+
+# 放回環境檔、secrets 與憑證（勿覆蓋剛放進去的 restic_password 與 rclone/）
+cp /tmp/restore-config/source/docker/.env /opt/docker/.env
+cp -rn /tmp/restore-config/source/docker/secrets/* /opt/docker/secrets/
+install -m 600 /tmp/restore-config/source/docker/appdata/traefik/acme/acme.json /opt/docker/appdata/traefik/acme/acme.json
+cp /tmp/restore-config/source/docker/appdata/couchdb/local.ini /opt/docker/appdata/couchdb/local.ini
+
+# 放回各服務的 DATADIR（依實際 DATADIR 路徑調整）
+cp -a /tmp/restore-config/source/data/. /mnt/raid1/
+rm -rf /tmp/restore-config
+```
+
+> **換新機檢查**：
+> - 確認主機網卡名稱是否仍為 `enp4s0`（`docker-compose-infrastructure.yml` 的 `ha_macvlan`），若不同須先修改。
+> - 若新主機的 LAN IP 或 Tailscale IP（`tailscale ip -4`）有變動，更新 `.env` 的 `LAN_IP`、`TAILSCALE_DNS_IP`、`PAT_TAILSCALE_IP`，並在 Tailscale Admin Console 更新 Nameserver 指向新的 `TAILSCALE_DNS_IP`。
+
+### Step 4：啟動基礎設施
+
+```bash
+docker compose -f docker-compose-infrastructure.yml --profile network up -d
+docker compose -f docker-compose-infrastructure.yml --profile monitor up -d
+docker compose -f docker-compose-infrastructure.yml --profile backup create restic-backup
+```
+
+確認 Traefik、Pi-hole、Tailscale DNS、Prometheus/Alertmanager 正常後再往下一步。
+
+### Step 5：還原 Immich 照片與資料庫（`restic/immich`）
+
+```bash
+# 1. 還原 library（upload、backups、profile）
+mkdir -p /tmp/restore-immich
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  -e RESTIC_REPOSITORY=rclone:gdrive:restic/immich \
+  -v /tmp/restore-immich:/restore \
+  --entrypoint restic restic-backup restore latest --target /restore
+
+mkdir -p /mnt/raid1/immich/library
+cp -a /tmp/restore-immich/source/library/. /mnt/raid1/immich/library/
+rm -rf /tmp/restore-immich
+
+# 2. 先單獨啟動資料庫，待 healthy 後匯入最新 .sql.gz 備份
+docker compose -f docker-compose-app.yml up -d immich-database
+gunzip --stdout /mnt/raid1/immich/library/backups/<最新備份>.sql.gz \
+  | sed "s/SELECT pg_catalog.set_config('search_path', '', false);/SELECT pg_catalog.set_config('search_path', 'public, pg_catalog', true);/g" \
+  | docker exec -i immich_postgres psql --dbname=postgres --username=postgres
+
+# 3. 啟動全部 App 與 Media 服務
+docker compose -f docker-compose-app.yml up -d
+docker compose -f docker-compose-media.yml up -d
+```
+
+### Step 6：還原 Market Data 與啟動 Homestack（`restic/market-data`）
+
+```bash
+# 1. 先啟動 MinIO 並初始化 bucket
+docker compose -f docker-compose-homestack.yml up -d minio minio-init
+
+# 2. 從 restic/market-data 還原到暫存目錄，再同步回 MinIO
+mkdir -p /mnt/raid1/restic-backup/market-data-staging
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  -e RESTIC_REPOSITORY=rclone:gdrive:restic/market-data \
+  --entrypoint restic restic-backup restore latest --target /
+
+# 3. 使用 secrets/minio.env 的管理員帳號（備份帳號僅唯讀）將 /staging 回傳到 minio:market-data
+docker compose -f docker-compose-infrastructure.yml --profile backup run --rm \
+  --env-file secrets/minio.env \
+  --entrypoint sh restic-backup -c '
+    RCLONE_CONFIG_MINIO_ACCESS_KEY_ID="$MINIO_ROOT_USER" \
+    RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY="$MINIO_ROOT_PASSWORD" \
+    rclone copy /staging minio:market-data --transfers 8 --checkers 16
+  '
+
+# 4. 啟動剩餘 Homestack 服務
+docker compose -f docker-compose-homestack.yml up -d
+```
+
+> **注意**：`backup.sh` 預設不備份 CouchDB 資料目錄、Kavita/Calibre 書庫、WebDAV（Zotero）與 PAT Postgres，重建後這些服務需從其他裝置重新同步或手動恢復。
+
+---
+
 ## 參考資源
 
 - [SimpleHomelab/Docker-Traefik](https://github.com/SimpleHomelab/Docker-Traefik)

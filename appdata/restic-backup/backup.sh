@@ -10,8 +10,93 @@
 set -u
 
 MODE="${1:-all}"
+METRICS_DIR="/metrics"
 log() { echo "[$(date -Iseconds)] $*"; }
 is_sunday() { [ "$(date +%u)" = "7" ]; }
+
+write_job_metrics() {
+  job="$1"
+  status="$2"
+  duration="$3"
+  now="$(date +%s)"
+  [ -d "$METRICS_DIR" ] || return 0
+
+  state_file="$METRICS_DIR/.state_${job}"
+  prev_success=0
+  if [ -f "$state_file" ]; then
+    prev_success="$(awk -F= '$1=="last_success"{print $2}' "$state_file")"
+    [ -n "$prev_success" ] || prev_success=0
+  fi
+  if [ "$status" = "1" ]; then
+    last_success="$now"
+  else
+    last_success="$prev_success"
+  fi
+
+  cat > "${state_file}.tmp" <<EOF
+status=${status}
+last_run=${now}
+last_success=${last_success}
+duration=${duration}
+EOF
+  mv "${state_file}.tmp" "$state_file"
+
+  prom_tmp="$METRICS_DIR/restic_backup.prom.$$"
+  {
+    echo "# HELP restic_backup_last_status Status of last restic backup run (1=success, 0=failure)."
+    echo "# TYPE restic_backup_last_status gauge"
+    for f in "$METRICS_DIR"/.state_*; do
+      [ -f "$f" ] || continue
+      j="${f##*/.state_}"
+      v="$(awk -F= '$1=="status"{print $2}' "$f")"
+      echo "restic_backup_last_status{job=\"$j\"} $v"
+    done
+
+    echo "# HELP restic_backup_last_run_timestamp_seconds Unix timestamp of last restic backup attempt."
+    echo "# TYPE restic_backup_last_run_timestamp_seconds gauge"
+    for f in "$METRICS_DIR"/.state_*; do
+      [ -f "$f" ] || continue
+      j="${f##*/.state_}"
+      v="$(awk -F= '$1=="last_run"{print $2}' "$f")"
+      echo "restic_backup_last_run_timestamp_seconds{job=\"$j\"} $v"
+    done
+
+    echo "# HELP restic_backup_last_success_timestamp_seconds Unix timestamp of last successful restic backup."
+    echo "# TYPE restic_backup_last_success_timestamp_seconds gauge"
+    for f in "$METRICS_DIR"/.state_*; do
+      [ -f "$f" ] || continue
+      j="${f##*/.state_}"
+      v="$(awk -F= '$1=="last_success"{print $2}' "$f")"
+      echo "restic_backup_last_success_timestamp_seconds{job=\"$j\"} $v"
+    done
+
+    echo "# HELP restic_backup_duration_seconds Duration of last restic backup run in seconds."
+    echo "# TYPE restic_backup_duration_seconds gauge"
+    for f in "$METRICS_DIR"/.state_*; do
+      [ -f "$f" ] || continue
+      j="${f##*/.state_}"
+      v="$(awk -F= '$1=="duration"{print $2}' "$f")"
+      echo "restic_backup_duration_seconds{job=\"$j\"} $v"
+    done
+  } > "$prom_tmp"
+  chmod 644 "$prom_tmp"
+  mv "$prom_tmp" "$METRICS_DIR/restic_backup.prom"
+}
+
+run_job() {
+  job="$1"
+  fn="$2"
+  start_ts="$(date +%s)"
+  if "$fn"; then
+    end_ts="$(date +%s)"
+    write_job_metrics "$job" 1 "$((end_ts - start_ts))"
+    return 0
+  else
+    end_ts="$(date +%s)"
+    write_job_metrics "$job" 0 "$((end_ts - start_ts))"
+    return 1
+  fi
+}
 
 backup_immich() {
   export RESTIC_REPOSITORY=rclone:gdrive:restic/immich
@@ -91,10 +176,14 @@ backup_market_data() {
 
 fail=0
 case "$MODE" in
-  immich) backup_immich || fail=1 ;;
-  config) backup_config || fail=1 ;;
-  market-data) backup_market_data || fail=1 ;;
-  all)    backup_immich || fail=1; backup_config || fail=1; backup_market_data || fail=1 ;;
+  immich) run_job immich backup_immich || fail=1 ;;
+  config) run_job config backup_config || fail=1 ;;
+  market-data) run_job market-data backup_market_data || fail=1 ;;
+  all)
+    run_job immich backup_immich || fail=1
+    run_job config backup_config || fail=1
+    run_job market-data backup_market_data || fail=1
+    ;;
   *) echo "unknown mode: $MODE" >&2; exit 2 ;;
 esac
 [ "$fail" = "0" ] && log "all done" || log "FAILED (see messages above)"

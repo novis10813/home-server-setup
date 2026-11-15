@@ -1,0 +1,23 @@
+# Backup Alert Rules (restic-backup via node-exporter textfile collector)
+# 備份任務監控告警
+
+groups:
+  - name: backup-alerts
+    rules:
+      - alert: ResticBackupFailed
+        expr: restic_backup_last_status == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Restic backup failed: {{ $labels.job }}"
+          description: "Backup job '{{ $labels.job }}' exited with failure. Check logs via: docker logs restic-backup"
+
+      - alert: ResticBackupStale
+        expr: (time() - restic_backup_last_success_timestamp_seconds) > 26 * 3600
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Restic backup stale: {{ $labels.job }}"
+          description: "Backup job '{{ $labels.job }}' has not succeeded for {{ humanizeDuration $value }}."
