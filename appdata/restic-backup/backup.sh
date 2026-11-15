@@ -2,7 +2,10 @@
 # restic 備份 → Google Drive（加密、快照）
 #   immich：照片原始檔 + Immich 每日資料庫備份   → rclone:gdrive:restic/immich
 #   config：各服務設定與 .env / secrets          → rclone:gdrive:restic/config
-# 用法：backup.sh [immich|config|all]（預設 all）。任一項失敗，整體以非 0 結束，但不會跳過另一項。
+#   market-data：MinIO market-data（Parquet）   → rclone:gdrive:restic/market-data
+#     先用 rclone 從 MinIO 增量複製到 /staging（只增不刪），再用 restic 打包上傳。
+#     直接逐檔上傳 Google Drive 每秒不到 1 個檔案，15 萬個小檔要數天；restic 打包後只需數小時。
+# 用法：backup.sh [immich|config|market-data|all]（預設 all）。任一項失敗，整體以非 0 結束，但不會跳過另一項。
 # 排程由 cron 容器在 Immich 02:00 資料庫備份之後觸發（見 appdata/cron/crontab）
 set -u
 
@@ -68,11 +71,30 @@ backup_config() {
   log "config: done"
 }
 
+backup_market_data() {
+  export RESTIC_REPOSITORY=rclone:gdrive:restic/market-data
+  log "market-data: start"
+  restic cat config >/dev/null || return 1
+  RCLONE_CONFIG_MINIO_ACCESS_KEY_ID="$MARKET_DATA_BACKUP_ACCESS_KEY" \
+  RCLONE_CONFIG_MINIO_SECRET_ACCESS_KEY="$MARKET_DATA_BACKUP_SECRET_KEY" \
+    rclone copy minio:market-data /staging --transfers 8 --checkers 16 \
+      --stats 5m --stats-one-line -v || return 1
+  restic backup --host homeserver --tag market-data /staging || return 1
+  restic forget --host homeserver --tag market-data \
+    --keep-daily 7 --keep-weekly 4 --keep-monthly 6 || return 1
+  if is_sunday; then
+    restic prune || return 1
+    restic check --read-data-subset=2% || return 1
+  fi
+  log "market-data: done"
+}
+
 fail=0
 case "$MODE" in
   immich) backup_immich || fail=1 ;;
   config) backup_config || fail=1 ;;
-  all)    backup_immich || fail=1; backup_config || fail=1 ;;
+  market-data) backup_market_data || fail=1 ;;
+  all)    backup_immich || fail=1; backup_config || fail=1; backup_market_data || fail=1 ;;
   *) echo "unknown mode: $MODE" >&2; exit 2 ;;
 esac
 [ "$fail" = "0" ] && log "all done" || log "FAILED (see messages above)"

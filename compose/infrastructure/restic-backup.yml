@@ -17,6 +17,10 @@ services:
     hostname: restic-backup # 固定主機名稱，避免每次重建容器後 restic 找不到上一份快照
     security_opt:
       - no-new-privileges:true
+    networks:
+      - homestack # 讀取 MinIO market-data（唯讀帳號）
+    env_file:
+      - ${DOCKERDIR}/secrets/market-data-backup.env
     secrets:
       - restic_password
     environment:
@@ -24,6 +28,10 @@ services:
       - RESTIC_REPOSITORY=rclone:gdrive:restic/immich
       - RESTIC_PASSWORD_FILE=/run/secrets/restic_password
       - RCLONE_CONFIG=/config/rclone/rclone.conf
+      # MinIO remote（金鑰在 backup.sh 內從 env_file 變數帶入）
+      - RCLONE_CONFIG_MINIO_TYPE=s3
+      - RCLONE_CONFIG_MINIO_PROVIDER=Minio
+      - RCLONE_CONFIG_MINIO_ENDPOINT=http://minio:9000
     volumes:
       - /etc/localtime:/etc/localtime:ro
       - ${DATADIR}/immich/library:/source/library:ro
@@ -41,9 +49,15 @@ services:
       - ${DOCKERDIR}/secrets/rclone:/config/rclone
       # 快取資料夾不存在時由 Docker 自動建立
       - ${DATADIR}/restic-backup/cache:/root/.cache/restic
+      # market-data 暫存區：rclone 從 MinIO 增量複製到此（約 33 GB，只增不刪），再由 restic 打包上傳
+      - ${DATADIR}/restic-backup/market-data-staging:/staging
     command: ["/bin/sh", "/backup.sh"]
     deploy:
       resources:
         limits:
           memory: 1g
           cpus: "1.0"
+
+networks:
+  homestack:
+    external: true
