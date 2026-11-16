@@ -8,6 +8,11 @@
     template IN AAAA {
         rcode NOERROR
     }
+    # 其他查詢類型（HTTPS/SVCB 等）回覆空答案，避免 SERVFAIL 造成 iOS/Safari 解析失敗
+    template ANY ANY {
+        rcode NOERROR
+    }
+    log
     errors
 }
 
