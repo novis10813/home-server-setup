@@ -1,0 +1,90 @@
+# Miniflux - Minimalist RSS reader
+# https://miniflux.app/docs/docker.html
+
+services:
+  ###########################################################################
+  # Miniflux
+  ###########################################################################
+  miniflux:
+    container_name: miniflux
+    image: miniflux/miniflux:${MINIFLUX_VERSION:-latest}
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    depends_on:
+      miniflux-db:
+        condition: service_healthy
+    networks:
+      - default
+      - t3_proxy
+    volumes:
+      # TEMP CVE-2026-111943（eMudhra CA 外洩）：上游映像修好後移除，見 appdata/ca-certificates/README.md
+      - ${DOCKERDIR}/appdata/ca-certificates/certs:/etc/ssl/certs:ro
+    environment:
+      - TZ=${TZ}
+      - DATABASE_URL_FILE=/run/secrets/miniflux_database_url
+      - RUN_MIGRATIONS=1
+      - CREATE_ADMIN=1
+      - ADMIN_USERNAME=${MINIFLUX_ADMIN_USER:-admin}
+      - ADMIN_PASSWORD_FILE=/run/secrets/miniflux_admin_password
+      - BASE_URL=https://rss.${DOMAINNAME_1}
+      - POLLING_FREQUENCY=60
+    secrets:
+      - miniflux_database_url
+      - miniflux_admin_password
+    healthcheck:
+      test: ["CMD", "/usr/bin/miniflux", "-healthcheck", "auto"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"
+    labels:
+      - "traefik.enable=true"
+      ## HTTP Router (internal only)
+      - "traefik.http.routers.miniflux-rtr-http.entrypoints=web-internal"
+      - "traefik.http.routers.miniflux-rtr-http.rule=Host(`rss.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.miniflux-rtr-http.middlewares=chain-no-auth-relaxed@file"
+      ## HTTPS Router (internal only)
+      - "traefik.http.routers.miniflux-rtr.entrypoints=websecure-internal"
+      - "traefik.http.routers.miniflux-rtr.rule=Host(`rss.${DOMAINNAME_1}`)"
+      - "traefik.http.routers.miniflux-rtr.middlewares=chain-no-auth-relaxed@file"
+      ## Service
+      - "traefik.http.routers.miniflux-rtr.service=miniflux-svc"
+      - "traefik.http.services.miniflux-svc.loadbalancer.server.port=8080"
+
+  ###########################################################################
+  # Miniflux PostgreSQL
+  ###########################################################################
+  miniflux-db:
+    container_name: miniflux-db
+    image: postgres:17-alpine
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - default
+    volumes:
+      - ${DATADIR}/miniflux/postgres:/var/lib/postgresql/data
+    environment:
+      - TZ=${TZ}
+      - POSTGRES_USER=miniflux
+      - POSTGRES_DB=miniflux
+      - POSTGRES_PASSWORD_FILE=/run/secrets/miniflux_db_password
+    secrets:
+      - miniflux_db_password
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "miniflux", "-d", "miniflux"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          memory: 256m
+          cpus: "0.50"

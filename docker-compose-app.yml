@@ -17,6 +17,12 @@ secrets:
     file: ${DOCKERDIR}/secrets/couchdb_password
   cli_proxy_api_config:
     file: ${DOCKERDIR}/secrets/cli-proxy-api-config.yaml
+  miniflux_db_password:
+    file: ${DOCKERDIR}/secrets/miniflux_db_password
+  miniflux_database_url:
+    file: ${DOCKERDIR}/secrets/miniflux_database_url
+  miniflux_admin_password:
+    file: ${DOCKERDIR}/secrets/miniflux_admin_password
 
 ########################### INCLUDES
 include:
@@ -34,3 +40,4 @@ include:
   - compose/apps/cliproxyapi.yml
   - compose/apps/webdav.yml
   - compose/apps/searxng.yml
+  - compose/apps/miniflux.yml

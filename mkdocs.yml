@@ -49,6 +49,7 @@ nav:
     - HugObsidian: app/hugobsidian.md
     - Home Assistant: app/home-assistant.md
     - Minecraft: app/minecraft.md
+    - Miniflux: app/miniflux.md
     - SearXNG: app/searxng.md
     - WebDAV: app/webdav.md
   - Media:
