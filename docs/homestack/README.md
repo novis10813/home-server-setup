@@ -17,10 +17,13 @@
 | NATS | 訊息佇列與 JetStream；客戶端協定 **不**經 Traefik 暴露 | [NATS](nats.md) |
 | Redis | Ephemeral 15-minute Bookmap hot cache for `financial-dashboard` | [Redis](redis.md) |
 | MinIO | S3-compatible object storage；S3 API internal HTTPS，Console OAuth | [MinIO](minio.md) |
+| QuestDB | 時序資料庫，存放 orderbook、trades 與 funding rate 資料 | （文件待補） |
 | crypto-relay | Binance WebSocket → NATS 市場資料 relay | （文件待補） |
 | financial-dashboard | `dash.${DOMAINNAME_1}` liquidity 與 recording policies UI | （文件待補） |
 | market-data-recorder | SQLite 長期錄製政策 → QuestDB；admin API 僅供內網反代 | （文件待補） |
+| market-data-archiver | QuestDB → MinIO `market-data` bucket raw Parquet 歸檔 | （文件待補） |
 | nautilus-catalog-builder | raw market data → Nautilus Trader Parquet catalog；cron 每日轉檔 | [Nautilus catalog builder](nautilus-catalog-builder.md) |
+| pat | Pi Agent Task Manager Coordinator + 專用 PostgreSQL（經 Tailscale 連線） | [PAT](pat.md) |
 
 ## 啟動與維護
 
